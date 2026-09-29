@@ -1,0 +1,1217 @@
+<title>SAG Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:opsz,wght@8..60,600&display=swap">
+<style>
+:root {
+  --bg: #f4f6f5; --surface: #ffffff; --sunk: #eceff0; --ink: #16201c; --muted: #5d6a66; --rule: #d3dad8;
+  --accent: #1f5f8b; --accent-soft: #e2edf5;
+  --err: #b3261e; --warn: #a86400; --unres: #66707a; --miss: #7a4fa0; --stated: #2f6b4f;
+  --figure-ink: #16201c; --figure-muted: #6b7773;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0f1413; --surface: #161d1c; --sunk: #1c2524; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2c3836;
+    --accent: #86b8de; --accent-soft: #1b2d3a;
+    --err: #f2877f; --warn: #e3a54a; --unres: #a3adb6; --miss: #c3a2e2; --stated: #7fc4a0;
+    --figure-ink: #e4ebe8; --figure-muted: #9aa8a3;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1413; --surface: #161d1c; --sunk: #1c2524; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2c3836;
+  --accent: #86b8de; --accent-soft: #1b2d3a;
+  --err: #f2877f; --warn: #e3a54a; --unres: #a3adb6; --miss: #c3a2e2; --stated: #7fc4a0;
+  --figure-ink: #e4ebe8; --figure-muted: #9aa8a3;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); padding-inline: 16px; padding-block: 20px 40px; }
+.wrap { max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; border-bottom: 1px solid var(--rule); padding-bottom: 12px; }
+h1 { font: 600 28px/1.1 var(--serif); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 small { font: 500 12px var(--mono); color: var(--muted); letter-spacing: 0.04em; margin-left: 10px; vertical-align: middle; }
+.lede { color: var(--muted); margin: 0; max-width: 62ch; }
+.grid { display: grid; grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.6fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; display: flex; flex-direction: column; min-width: 0; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+.label { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+select, button { font: 500 13px var(--sans); color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+button:hover, select:hover { border-color: var(--accent); }
+button:focus-visible, select:focus-visible, textarea:focus-visible, .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+textarea { width: 100%; min-height: 520px; resize: vertical; border: 0; padding: 14px; background: var(--surface); color: var(--ink); font: 13.5px/1.6 var(--mono); tab-size: 2; white-space: pre; overflow: auto; border-radius: 0 0 6px 6px; }
+.status { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 12px var(--mono); padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; font-variant-numeric: tabular-nums; }
+.c-Syntax, .c-Error { color: var(--err); } .c-Warning { color: var(--warn); } .c-Unresolved { color: var(--unres); }
+.c-Missing { color: var(--miss); } .c-Stated { color: var(--stated); }
+.tabs { display: flex; gap: 2px; }
+.tab { font: 500 13px var(--sans); background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 6px 10px; color: var(--muted); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.view { padding: 14px; overflow-x: auto; }
+.figure-box { overflow: auto; max-height: 640px; }
+.figure-box.tall { max-height: none; }
+.sagfig { display: block; max-width: none; height: auto; }
+.sagfig text { font-family: var(--sans); fill: var(--figure-ink); }
+.sagfig .muted { fill: var(--figure-muted); }
+.sagfig .stroke, .sagfig .stroke2 { stroke: var(--figure-ink); stroke-width: 1.5; }
+.sagfig .stroke2 { stroke-width: 1.9; }
+.sagfig .thin { stroke: var(--figure-ink); stroke-width: 1.1; }
+.sagfig .dotted { stroke: var(--figure-ink); stroke-width: 2.2; stroke-dasharray: 1.5 4; stroke-linecap: round; }
+.sagfig .fillink { fill: var(--figure-ink); stroke: none; }
+.sagfig .hollow { fill: var(--surface); stroke: var(--figure-ink); stroke-width: 1.4; }
+.sagfig .open { fill: var(--surface); stroke: var(--figure-ink); stroke-width: 1.9; }
+.sagfig .solidnode { fill: var(--figure-ink); }
+.sagfig .plate { fill: none; stroke: var(--figure-ink); stroke-width: 1.4; }
+.sagfig .socket { fill: none; stroke: var(--figure-ink); stroke-width: 1.3; stroke-dasharray: 6 4; }
+.sagfig .frontier { stroke: var(--figure-muted); stroke-width: 1; stroke-dasharray: 8 5; }
+.sagfig .badge.err { fill: var(--err); } .sagfig .badge.warn { fill: var(--warn); } .sagfig .badge.unres { fill: var(--unres); }
+.sagfig .badgeink { fill: var(--surface); }
+.sagfig .stub { opacity: 0.38; }
+.sagfig .via { stroke: var(--figure-muted); stroke-width: 1; stroke-dasharray: 2 4; }
+.panel-fig + .panel-fig { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--rule); }
+.panel-fig h4 { font: 600 14px var(--sans); margin: 0 0 6px; }
+.panel-fig h4 span { font: 500 11px var(--mono); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-right: 8px; }
+.note { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th { text-align: left; font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 6px 10px 6px 0; border-bottom: 1px solid var(--rule); }
+td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td.cls { white-space: nowrap; font: 500 12.5px var(--mono); }
+td.node { font: 13px var(--mono); white-space: nowrap; }
+td.rule { font: 13px var(--mono); color: var(--muted); white-space: nowrap; }
+.sev { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: currentColor; margin-right: 7px; vertical-align: 1px; }
+.maths h3 { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 16px 0 6px; }
+.maths h3:first-child { margin-top: 0; }
+.eq { overflow-x: auto; padding: 4px 0; }
+pre.latex { font: 12.5px/1.55 var(--mono); background: var(--sunk); padding: 12px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; margin: 0; }
+.ref { font-size: 13px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 12px; }
+.ref code { font: 12.5px var(--mono); background: var(--sunk); padding: 1px 5px; border-radius: 3px; }
+.syntax-help { font: 12.5px/1.6 var(--mono); color: var(--muted); padding: 10px 14px; border-top: 1px solid var(--rule); }
+.syntax-help b { color: var(--ink); font-weight: 500; }
+@media (prefers-reduced-motion: no-preference) { .tab, button { transition: border-color .15s, color .15s, background .15s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>SAG Workbench <small>v0.5.1</small></h1>
+    <p class="lede">Write a Statistical Analysis Graph as text. The figure, the maths it stands for, and the validator's findings update as you type.</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-label="SAG text">
+      <div class="panel-head">
+        <span class="label">Text</span>
+        <label class="label" for="example" style="display:flex;gap:8px;align-items:center;">Example
+          <select id="example"></select>
+        </label>
+      </div>
+      <textarea id="src" spellcheck="false" aria-label="SAG source text"></textarea>
+      <div class="syntax-help">
+        <b>fixed</b> n = 40 · <b>unknown</b> p · <b>observed</b> y = 12 ~ Binomial(n, p) · <b>predicted</b> y_new [future] ~ … · <b>derived</b> d := f(…) · <b>belief</b> prior ~ Beta(2, 2) [assumed] -&gt; p · <b>condition</b> C @o given y [a &lt;= o] -&gt; post(p) · <b>check</b> c on post criterion "…" = pass|fail · <b>realise</b> y_new -&gt; y_real · <b>plate</b> j in 1..J { … } · time: {a = o+3, e = o-2}
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Results">
+      <div class="panel-head">
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" id="tab-figure" aria-controls="view-figure" aria-selected="true">Figure</button>
+          <button class="tab" role="tab" id="tab-validator" aria-controls="view-validator" aria-selected="false">Validator</button>
+          <button class="tab" role="tab" id="tab-maths" aria-controls="view-maths" aria-selected="false">Maths</button>
+        </div>
+        <div class="status" id="status" aria-live="polite"></div>
+      </div>
+      <div class="view" id="view-figure" role="tabpanel" aria-labelledby="tab-figure">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <button id="panels" aria-pressed="false">Panels</button>
+          <button id="overlay" aria-pressed="true">Validator overlay</button>
+          <button id="copy-svg">Copy SVG</button>
+        </div>
+        <div class="figure-box" id="figure"></div>
+        <p class="note" id="overlay-note">Coloured marks are the validator overlay (red = error, orange = warning, grey = unresolved). They are not part of the notation; hover a mark for its message.</p>
+      </div>
+      <div class="view" id="view-validator" role="tabpanel" aria-labelledby="tab-validator" hidden>
+        <table>
+          <thead><tr><th>Class</th><th>Rule</th><th>Node</th><th>Finding</th></tr></thead>
+          <tbody id="diags"></tbody>
+        </table>
+      </div>
+      <div class="view maths" id="view-maths" role="tabpanel" aria-labelledby="tab-maths" hidden>
+        <div id="maths"></div>
+        <h3>LaTeX</h3>
+        <div style="display:flex;gap:8px;margin-bottom:8px;"><button id="copy-tex">Copy LaTeX</button></div>
+        <pre class="latex" id="latex"></pre>
+      </div>
+    </section>
+  </div>
+
+  <p class="ref">Specification: SAG v0.5.1, repository <code>AriesConsultKenya/sag-language</code>. This page runs a JavaScript port of the reference tool <code>sagtool</code> (Python); a test keeps their findings identical on every example. The Python tool also writes the full LaTeX supplement and PNG figures.</p>
+</div>
+
+<script>
+window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'global' }, startup: { typeset: false } };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js" async></script>
+<script>
+/* SAG in the browser (Step 4.5): a JavaScript port of sagtool (parser, validator, layout,
+ * SVG renderer, LaTeX maths). The Python package `sagtool/` is the reference implementation;
+ * tests/test_web_parity.py checks that this port gives the same diagnostics on every example.
+ * Works as a browser global (window.SAG) and as a Node module.
+ */
+(function (root) {
+  'use strict';
+  const IDENT = '[A-Za-z_]\\w*';
+  const NODE_KINDS = ['fixed', 'unknown', 'observed', 'predicted', 'derived', 'belief'];
+
+  // ------------------------------------------------------------------ graph
+  function Node(name, kind, line, o) {
+    return Object.assign({ name, kind, line: line || 0, value: null, family: null, func: null, tags: {},
+      meta: {}, plates: [], scope: [], roots: [], origin: null, target: null, criterion: null,
+      result: null, alts: [] }, o || {});
+  }
+  function Edge(src, dst, kind, filt, lag) { return { src, dst, kind, filt: filt || null, lag: !!lag }; }
+
+  class Graph {
+    constructor() {
+      this.version = ''; this.nodes = new Map(); this.edges = []; this.plates = new Map();
+      this.revisions = []; this.pending = []; this.errors = []; this.originAfter = {};
+      this.indexrefs = []; this.structural = [];
+    }
+    add(n) { if (this.nodes.has(n.name)) this.errors.push([n.line, `duplicate node '${n.name}'`]); this.nodes.set(n.name, n); }
+    N(name) { return this.nodes.get(name); }
+    parents(name, kinds) { return this.edges.filter(e => e.dst === name && (!kinds || kinds.includes(e.kind))).map(e => e.src); }
+    children(name, kinds) { return this.edges.filter(e => e.src === name && (!kinds || kinds.includes(e.kind))).map(e => e.dst); }
+    ancestors(name, kinds = ['gen', 'det', 'prior', 'evid', 'out']) {
+      const seen = new Set(), stack = [name];
+      while (stack.length) { const cur = stack.pop(); for (const p of this.parents(cur, kinds)) if (!seen.has(p)) { seen.add(p); stack.push(p); } }
+      return seen;
+    }
+    ancestorsAny(name) { return this.ancestors(name, ['gen', 'det', 'prior', 'evid', 'out', 'eval']); }
+    descendants(name, kinds = ['gen', 'det', 'eval', 'out', 'evid']) {
+      const seen = new Set(), stack = [name];
+      while (stack.length) { const cur = stack.pop(); for (const c of this.children(cur, kinds)) if (!seen.has(c)) { seen.add(c); stack.push(c); } }
+      return seen;
+    }
+  }
+
+  // ------------------------------------------------------------------ helpers
+  const base = s => s.trim().replace(/\[.*\]$/, '');
+  function splitTop(s, sep = ',') {
+    const out = []; let depth = 0, cur = '';
+    for (const ch of s) {
+      if ('([{'.includes(ch)) depth++; else if (')]}'.includes(ch)) depth--;
+      if (ch === sep && depth === 0) { out.push(cur); cur = ''; } else cur += ch;
+    }
+    if (cur.trim()) out.push(cur);
+    return out.map(x => x.trim());
+  }
+  function takeCall(s, start) {
+    const rest = s.slice(start);
+    const m = rest.match(/^\s*([A-Za-z_?][\w.]*|\?)\s*\(/);
+    if (!m) {
+      const m2 = rest.match(new RegExp('^\\s*(' + IDENT + ')'));
+      if (m2) return [m2[1], '', start + m2[0].length];
+      return [null, '', start];
+    }
+    const i = start + m[0].length; let depth = 1, j = i;
+    while (j < s.length && depth) { if (s[j] === '(') depth++; else if (s[j] === ')') depth--; j++; }
+    return [m[1], s.slice(i, j - 1), j];
+  }
+  function parseTime(tok) {
+    tok = tok.trim();
+    const m = tok.match(new RegExp('^(' + IDENT + ')\\s*([+-]\\s*\\d+(?:\\.\\d+)?)?$'));
+    if (m && !/^\d{4}-\d{2}-\d{2}$/.test(tok)) return [m[1], m[2] ? parseFloat(m[2].replace(/ /g, '')) : 0];
+    return ['abs', tok];
+  }
+  function parseFilter(txt) {
+    txt = txt.trim();
+    const parts = txt.split(/\s*(<=|<|>=|>)\s*/);
+    const f = { attr: null, lo: null, loIncl: false, hi: null, hiIncl: false, raw: txt };
+    if (parts.length === 3) {
+      const [a, op, b] = parts;
+      if (/^[ae]$/.test(a)) {
+        f.attr = a; const t = parseTime(b); f.abs = t[0] === 'abs';
+        if (op === '<=' || op === '<') { f.hi = t[1]; f.hiIncl = op === '<='; } else { f.lo = t[1]; f.loIncl = op === '>='; }
+      }
+    } else if (parts.length === 5) {
+      const [lo, op1, a, op2, hi] = parts;
+      f.attr = a; f.lo = parseTime(lo)[1]; f.loIncl = op1 === '<='; f.hi = parseTime(hi)[1]; f.hiIncl = op2 === '<=';
+    }
+    return f;
+  }
+  function parseMeta(txt) {
+    const meta = {};
+    for (const item of splitTop(txt)) {
+      if (!item) continue;
+      if (item.startsWith('decided')) { meta.decided = item.split(':').slice(1).join(':').trim(); continue; }
+      if (item.startsWith('using')) {
+        meta.using = splitTop(item.split(':').slice(1).join(':').trim().replace(/^\(+|\)+$/g, '')).map(base); continue;
+      }
+      const m = item.match(/^([ae])\s*(=|<=|<|>=|>)\s*(.+)$/);
+      if (m) meta[m[1]] = [m[2], parseTime(m[3])];
+      else if (/^[ae]$/.test(item)) meta[item] = ['unknown', null];
+      else (meta.other = meta.other || []).push(item);
+    }
+    return meta;
+  }
+  function parseTags(txt) {
+    const tags = {}; const re = /(?:^|\s)\[([^\]]*)\]/g; let m;
+    while ((m = re.exec(txt))) {
+      const t = m[1].trim();
+      if (t.includes(':')) { const k = t.slice(0, t.indexOf(':')).trim(); tags[k] = t.slice(t.indexOf(':') + 1).trim(); }
+      else tags[t] = true;
+    }
+    return tags;
+  }
+
+  // ------------------------------------------------------------------ parser
+  function parse(text) {
+    const g = new Graph(); const plateStack = [];
+    text.split(/\r?\n/).forEach((raw, k) => {
+      const ln = k + 1; const line = raw.split('#')[0].replace(/\s+$/, '');
+      if (!line.trim()) return;
+      const s = line.trim();
+      try {
+        if (s.startsWith('sag ')) { g.version = s.slice(4).trim(); return; }
+        if (s === '}') { plateStack.pop(); return; }
+        let m = s.match(new RegExp('^plate\\s+(' + IDENT + ')\\s+in\\s+(.+?)\\s*\\{$'));
+        if (m) {
+          let rng = m[2]; const am = rng.match(/^(.*?)\s+after\s+(\d{4}-\d{2}-\d{2})$/);
+          if (am) { rng = am[1]; g.originAfter[m[1]] = am[2]; }
+          g.plates.set(m[1], rng); plateStack.push(m[1]); return;
+        }
+        if (s.startsWith('condition ')) return condition(g, s, ln, [...plateStack]);
+        if (s.startsWith('check ')) {
+          m = s.match(new RegExp('^check\\s+(' + IDENT + ')\\s+on\\s+(' + IDENT + ')\\s+criterion\\s+"([^"]*)"\\s*=\\s*(\\w+)'));
+          const n = Node(m[1], 'check', ln, { target: m[2], criterion: m[3], result: m[4], plates: [...plateStack] });
+          g.add(n); g.edges.push(Edge(m[2], n.name, 'check')); return;
+        }
+        if (s.startsWith('realise ')) {
+          m = s.match(new RegExp('^realise\\s+(' + IDENT + ')\\s*->\\s*(' + IDENT + ')'));
+          g.edges.push(Edge(m[1], m[2], 'real')); return;
+        }
+        if (s.startsWith('revise ')) { g.revisions.push(s); return; }
+        if (s.startsWith('socket ')) return socket(g, s, ln, [...plateStack]);
+        m = s.match(new RegExp('^(' + NODE_KINDS.join('|') + ')\\s+(' + IDENT + '(?:\\[[^\\]]*\\])?)(.*)$'));
+        if (m) return node(g, m[1], base(m[2]), m[3], ln, [...plateStack]);
+        g.errors.push([ln, `cannot parse: ${s}`]);
+      } catch (ex) { g.errors.push([ln, `cannot parse (${ex.message}): ${s}`]); }
+    });
+    resolve(g);
+    return g;
+  }
+  function node(g, kind, name, rest, ln, plates) {
+    const n = Node(name, kind, ln, { plates });
+    const mm = rest.match(/\{([^}]*)\}/);
+    if (mm) { n.meta = parseMeta(mm[1]); rest = rest.slice(0, mm.index) + rest.slice(mm.index + mm[0].length); }
+    if (rest.includes(':=')) {
+      const i = rest.indexOf(':='); const [f, args, end] = takeCall(rest, i + 2);
+      n.func = f; g.pending.push([name, 'det', args]); rest = rest.slice(0, i) + rest.slice(end);
+    }
+    if (rest.includes('~')) {
+      const i = rest.indexOf('~'); const [f, args, end] = takeCall(rest, i + 1);
+      n.family = f; g.pending.push([name, 'gen', args]); rest = rest.slice(0, i) + rest.slice(end);
+    }
+    if (rest.includes('->')) {
+      const i = rest.indexOf('->'); const tail = rest.slice(i + 2); const tp = tail.indexOf('[');
+      const rootsTxt = tp < 0 ? tail : tail.slice(0, tp);
+      n.roots = splitTop(rootsTxt).filter(Boolean).map(base);
+      rest = rest.slice(0, i) + (tp < 0 ? '' : tail.slice(tp));
+    }
+    const mv = rest.match(/^\s*=\s*([^\[\{]+)/);
+    if (mv) { n.value = mv[1].trim(); rest = rest.slice(mv[0].length); }
+    n.tags = parseTags(rest);
+    g.add(n);
+  }
+  function socket(g, s, ln, plates) {
+    const m = s.match(new RegExp('^socket\\s+(' + IDENT + ')\\s*:\\s*derived\\s*:=\\s*(.*?)\\{(.*)\\}\\s*(.*)$'));
+    const name = m[1]; let [f, args] = takeCall(m[2], 0);
+    const n = Node(name, 'derived', ln, { func: f, plates });
+    n.alts = m[3].split(';').map(a => a.trim()).filter(a => a.startsWith('alt')).map(a => a.slice(4).trim());
+    const sel = m[4].match(new RegExp('selector\\s+(' + IDENT + ')'));
+    n.tags = { socket: true };
+    if (sel) { n.tags.selector = sel[1]; args = args + ', ' + sel[1]; }
+    g.add(n); g.pending.push([name, 'det', args]);
+  }
+  function condition(g, s, ln, plates) {
+    const m = s.match(new RegExp('^condition\\s+(' + IDENT + ')\\s*(?:@(' + IDENT + '))?\\s+given\\s+(.*?)\\s*->\\s*(.*)$'));
+    const [, name, origin, evid, outs] = m;
+    g.add(Node(name, 'condition', ln, { origin: origin || null, plates }));
+    for (const ev of splitTop(evid)) {
+      const fm = ev.match(new RegExp('^(' + IDENT + '(?:\\[[^\\]]*\\])?)\\s*(?:\\[([^\\]]*)\\])?$'));
+      g.edges.push(Edge(base(fm[1]), name, 'evid', fm[2] ? parseFilter(fm[2]) : null));
+    }
+    for (const out of splitTop(outs)) {
+      const om = out.match(new RegExp('^(' + IDENT + ')\\s*\\(([^)]*)\\)\\s*(.*)$'));
+      const b = Node(om[1], 'belief', ln, { plates, scope: splitTop(om[2]).map(base) });
+      b.tags = parseTags(om[3]); b.tags.learned = true;
+      g.add(b); g.edges.push(Edge(name, b.name, 'out'));
+    }
+  }
+  function resolve(g) {
+    for (const [name, kind, args] of g.pending) {
+      for (let a of splitTop(args)) {
+        if (!a) continue;
+        let ekind = kind; const em = a.match(/^eval\s+(.*)$/);
+        if (em) { ekind = 'eval'; a = em[1]; }
+        let filt = null; const fm = a.match(/^(.*?\S)\s+\[([^\]]*)\]\s*$/);
+        if (fm && /(^|[\s<>=])[ae]\s*(<=|<|>=|>)|(<=|<|>=|>)\s*[ae]\s*($|[<>=])/.test(fm[2])) { a = fm[1]; filt = parseFilter(fm[2]); }
+        const re = new RegExp('(' + IDENT + ')(\\[[^\\]]*\\])?(?!\\s*\\(|\\w)', 'g'); let m; const seen = new Set();
+        while ((m = re.exec(a))) {
+          const key = m[1] + '|' + (m[2] || ''); if (seen.has(key)) continue; seen.add(key);
+          const ident = m[1], idx = m[2] || '';
+          if (!g.nodes.has(ident)) continue;
+          if (idx) g.indexrefs.push([ident, idx.slice(1, -1), name]);
+          const lag = !!(idx && (/\w\s*-\s*\d+/.test(idx) || /'\s*</.test(idx)));
+          if (ident !== name) g.edges.push(Edge(ident, name, ekind, filt, lag));
+        }
+      }
+    }
+    for (const n of g.nodes.values()) for (const r of n.roots) g.edges.push(Edge(n.name, r, 'prior'));
+    for (const n of g.nodes.values()) {
+      const bel = g.edges.filter(e => e.dst === n.name && g.N(e.src) && g.N(e.src).kind === 'belief').map(e => e.src);
+      const scope = new Set(bel.flatMap(b => g.N(b).scope));
+      if (scope.size) g.edges = g.edges.filter(e => !(e.dst === n.name && scope.has(e.src) && e.kind === 'det'));
+    }
+    cycles(g);
+    for (const n of g.nodes.values()) for (const x of n.scope) if (!g.nodes.has(x)) g.errors.push([n.line, `belief '${n.name}': scope node '${x}' not declared`]);
+  }
+  function cycles(g) {
+    for (const [parent, idx, child] of g.indexrefs) {
+      const pl = g.N(child) ? g.N(child).plates : [];
+      for (const v of pl) {
+        const m = idx.match(new RegExp('\\b' + v + "\\s*([+-])\\s*\\d+"));
+        if (m && m[1] === '+') g.structural.push(['backward-index', child, `${parent}[${idx}] feeds ${child}: backward-indexed dependence on plate ${v}`]);
+        const m2 = idx.match(new RegExp("(\\w+'?)\\s*(<=|<|>=|>)\\s*" + v + '\\b'));
+        if (m2 && m2[1] !== v && (m2[2] === '>' || m2[2] === '>=')) g.structural.push(['backward-index', child, `${parent}[${idx}] feeds ${child}: later runs feed an earlier one (plate ${v})`]);
+        if (parent === child && new RegExp('^\\s*' + v + '\\s*$').test(idx)) g.structural.push(['cycle', child, `${child}[${idx}] depends on itself at the same index`]);
+      }
+    }
+    const adj = new Map();
+    for (const e of g.edges) if ((e.kind === 'gen' || e.kind === 'det') && !e.lag) { if (!adj.has(e.src)) adj.set(e.src, new Set()); adj.get(e.src).add(e.dst); }
+    const colour = new Map(), found = new Map();
+    const dfs = (u, stack) => {
+      colour.set(u, 1);
+      for (const v of adj.get(u) || []) {
+        if (colour.get(v) === 1) { const cyc = (stack.includes(v) ? stack.slice(stack.indexOf(v)) : [u, v]).slice().sort(); found.set(cyc.join('\u0000'), cyc); }
+        else if (!colour.get(v)) dfs(v, [...stack, v]);
+      }
+      colour.set(u, 2);
+    };
+    for (const u of [...adj.keys()]) if (!colour.get(u)) dfs(u, [u]);
+    for (const cyc of found.values()) g.structural.push(['cycle', cyc[0], `generative cycle: ${cyc.join(' -> ')}`]);
+  }
+
+  // ------------------------------------------------------------------ validator
+  const ORDER = { Syntax: 0, Error: 1, Missing: 2, Unresolved: 3, Warning: 4, Stated: 5 };
+  const PROVENANCE = ['assumed', 'borrowed', 'elicited', 'constructed', 'learned', 'tested'];
+  const PARAM_AMBIGUOUS = { Gamma: 'shape-rate or shape-scale', Normal: 'standard deviation or variance',
+    InvGamma: 'shape-scale or shape-rate', Weibull: 'scale or rate' };
+  const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  const pyCmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  const sortS = arr => [...arr].sort(pyCmp);
+  const fmtNum = x => (typeof x === 'number' ? String(Number(x.toPrecision(6))) : String(x));
+
+  function validate(g) {
+    const d = []; const add = (cls, code, rule, node, msg) => d.push({ cls, code, rule, node, msg });
+    for (const [ln, msg] of g.errors) add('Syntax', 'syntax', '-', `line ${ln}`, msg);
+    if (!g.version) add('Syntax', 'no-version', '-', '-', "missing 'sag <version>' line");
+    const N = n => g.N(n); const nodes = [...g.nodes.values()];
+    const evidEdges = g.edges.filter(e => e.kind === 'evid');
+    const evidence = new Set(evidEdges.map(e => e.src));
+    const evidenceAll = new Set(evidence);
+    for (const x of evidence) for (const a of detClosure(g, x)) if (N(a).kind === 'observed') evidenceAll.add(a);
+    const conditions = nodes.filter(n => n.kind === 'condition');
+    const priorBeliefs = nodes.filter(n => n.kind === 'belief' && n.roots.length);
+    const outBeliefs = nodes.filter(n => n.kind === 'belief' && n.scope.length);
+
+    // R1 / R18 constants and index sets
+    const plateSyms = new Set(); for (const rng of g.plates.values()) for (const s of rng.match(/[A-Za-z_]\w*/g) || []) plateSyms.add(s);
+    for (const n of nodes) if (n.kind === 'fixed' && n.value == null) {
+      const rule = plateSyms.has(n.name) ? 'R18' : 'R1';
+      add('Missing', 'value', rule, n.name, `${rule === 'R18' ? 'index set size' : 'constant value'} not given (numeric computation blocked)`);
+    }
+    for (const [v, rng] of g.plates) for (const s of rng.match(/[A-Za-z_]\w*/g) || []) if (!g.nodes.has(s)) add('Missing', 'index-set', 'R18', v, `plate ${v} in ${rng}: '${s}' is not declared`);
+    // R5
+    for (const n of nodes) {
+      if (['unknown', 'observed', 'predicted'].includes(n.kind) && n.family === '?') add('Missing', 'family', 'R5', n.name, 'distribution family not given');
+      if (has(PARAM_AMBIGUOUS, n.family) && !has(n.tags, 'param')) add('Missing', 'parameterisation', 'R5', n.name, `${n.family}: ${PARAM_AMBIGUOUS[n.family]} not stated`);
+    }
+    for (const b of priorBeliefs) if (has(PARAM_AMBIGUOUS, b.family) && !has(b.tags, 'param')) add('Missing', 'parameterisation', 'R5', b.name, `${b.family}: ${PARAM_AMBIGUOUS[b.family]} not stated`);
+    // R7, R27
+    for (const r of nodes.filter(n => n.kind === 'unknown' && n.family == null)) {
+      const feeding = g.parents(r.name, ['prior']);
+      if (!feeding.length) add('Missing', 'prior', 'R7', r.name, 'root unknown has no belief (prior) edge');
+      else if (feeding.length > 1) add('Error', 'prior-count', 'R7', r.name, `root unknown fed by ${feeding.length} beliefs: ${feeding.join(', ')}`);
+    }
+    for (const b of priorBeliefs) {
+      for (const r of b.roots) {
+        if (N(r) && N(r).kind === 'predicted') add('Error', 'belief-to-predicted', 'R11', b.name, `belief feeds predicted observable '${r}' directly`);
+        else if (N(r) && N(r).kind === 'unknown' && N(r).family != null) add('Error', 'belief-to-nonroot', 'R7', b.name, `'${r}' already has a generation family; a belief may feed only root unknowns`);
+      }
+      if (b.family == null || b.family === '?') add('Missing', 'prior-family', 'R7', b.name, `prior family for (${b.roots.join(', ')}) not specified`);
+      const prov = PROVENANCE.filter(k => has(b.tags, k));
+      const inTest = b.plates.length > 0 || g.children(b.name).some(s => N(s) && N(s).tags.socket);
+      if (!prov.length && !inTest) add('Missing', 'provenance', 'R27', b.name, 'prior provenance not stated');
+      if (has(b.tags, 'borrowed') && !has(b.meta, 'a')) add('Missing', 'borrowed-date', 'R27', b.name, 'borrowed prior needs an availability date {a = ...}');
+      if (has(b.tags, 'elicited') && !has(b.meta, 'decided')) add('Unresolved', 'decision-date', 'T5', b.name, 'elicited prior has no decision date {decided: ...}');
+      if (has(b.tags, 'constructed')) add('Stated', 'constructed', 'R30', b.name, 'constructed belief, not a posterior');
+      if (has(b.tags, 'elicited')) add('Stated', 'elicited', 'R27', b.name, `elicited prior: ${b.tags.elicited}`);
+    }
+    // R11
+    for (const n of nodes) if (n.kind === 'predicted') {
+      if (!has(n.tags, 'future') && !has(n.tags, 'rep')) add('Error', 'predicted-tag', 'R11', n.name, 'predicted observable needs [future] or [rep: y]');
+      if (evidence.has(n.name)) add('Error', 'predicted-as-evidence', 'R11', n.name, 'predicted observable used as evidence');
+    }
+    // R12
+    for (const x of evidence) if (N(x) && N(x).kind === 'derived') {
+      const bad = [...detClosure(g, x)].filter(a => ['unknown', 'predicted', 'belief'].includes(N(a).kind));
+      if (bad.length) add('Error', 'summary-unrecorded', 'R12', x, `evidence summary has unrecorded ancestors: ${sortS(bad).join(', ')}`);
+    }
+    // R28
+    const tagrefs = tagReferences(g);
+    for (const n of nodes) if (n.kind === 'observed' && n.family == null && !g.parents(n.name, ['gen', 'det']).length) {
+      const feeds = [...g.descendants(n.name, ['gen', 'det'])].some(x => g.parents(x, ['gen']).length && ['unknown', 'observed', 'predicted'].includes(N(x).kind));
+      if (feeds && !isIndicator(g, n.name)) add('Stated', 'exogenous', 'R28', n.name, 'root recorded input: exogenous, no factor (conditioned on)');
+    }
+    // R22/R23
+    for (const n of nodes) {
+      if (!has(n.tags, 'obs')) continue;
+      const m = String(n.tags.obs).match(/^\s*([A-Za-z_]\w*)(?:\[[^\]]*\])?\s*=\s*1/);
+      const ind = m ? m[1] : null;
+      if (!ind || !g.nodes.has(ind)) { add('Stated', 'ignorable-missingness', 'R23', n.name, 'valid under ignorable missingness; not encoded (no drawn response indicator)'); continue; }
+      const ps = g.parents(ind, ['gen', 'det']); const kinds = new Set(ps.map(p => N(p).kind));
+      if (!ps.length || [...kinds].every(k => k === 'fixed')) add('Stated', 'MCAR', 'R23', n.name, `missingness MCAR (${ind} has no data parents)`);
+      else if (ps.includes(n.name) || kinds.has('unknown') || kinds.has('predicted')) add('Stated', 'MNAR', 'R23', n.name, `missingness MNAR (${ind} depends on unrecorded or on ${n.name}); mechanism must be modelled`);
+      else add('Stated', 'MAR', 'R23', n.name, `missingness MAR (${ind} depends on recorded ${ps.filter(p => N(p).kind === 'observed').join(', ')}); ignorable for the parameters given those`);
+    }
+    // R24
+    for (const n of nodes) if (has(n.tags, 'cens')) {
+      const m = String(n.tags.cens).match(/\bif\s+([A-Za-z_]\w*)/);
+      if (!m) add('Missing', 'censoring-indicator', 'R24', n.name, 'censoring tag names no event indicator (if delta = 0)');
+      else if (!g.nodes.has(m[1])) add('Missing', 'censoring-indicator', 'R24', n.name, `censoring indicator '${m[1]}' not declared`);
+      add('Stated', 'noninformative-censoring', 'R24', n.name, 'non-informative censoring assumed, not encoded');
+    }
+    // R32-R34
+    for (const n of nodes) {
+      if (has(n.tags, 'soft')) add('Stated', 'soft-evidence', 'R32', n.name, `soft evidence (expected likelihood over ${n.tags.soft}), not a recorded value`);
+      if (has(n.tags, 'restart after gap')) add('Stated', 'restart', 'v0.4', n.name, 'restart after gap');
+    }
+    const evLeaves = [...evidenceAll].filter(x => N(x) && N(x).kind === 'observed');
+    const withStatus = evLeaves.filter(x => has(N(x).tags, 'status'));
+    if (withStatus.length) for (const x of sortS(evLeaves.filter(x => !withStatus.includes(x)))) add('Missing', 'evidence-status', 'R33', x, 'evidence status not declared (status is used elsewhere)');
+    for (const x of withStatus) {
+      const m = String(N(x).tags.status).match(/^propagated\s+from\s+(\S+)/);
+      if (m) add('Unresolved', 'propagated-evidence', 'R34', x, `evidence propagated from ${m[1]}: its evidence is not in this file, overlap cannot be checked`);
+    }
+    // T2', R13
+    for (const c of conditions) {
+      if (!c.origin) continue; const o = c.origin;
+      const starts = evidEdges.filter(e => e.dst === c.name).map(e => [e.src, e.filt, 'evidence']);
+      for (const b of outBeliefs) if (g.parents(b.name, ['out']).includes(c.name)) for (const s of b.scope) starts.push([s, null, 'scope']);
+      t2(g, add, starts, o, `condition ${c.name} @${o}`, tagrefs);
+      for (const n of nodes) if (n.plates.includes(o) && n.kind === 'belief' && has(n.tags, 'constructed')) {
+        const ins = g.edges.filter(e => e.dst === n.name && ['det', 'eval', 'gen'].includes(e.kind)).map(e => [e.src, e.filt, 'input']);
+        t2(g, add, ins, o, `${n.name} (run @${o})`, tagrefs);
+      }
+    }
+    for (const e of g.edges) if (e.kind === 'real') {
+      const origin = originOfPrediction(g, e.src); const obs = N(e.dst);
+      if (!obs || !origin) continue;
+      if (avail(obs.meta, origin, true) === 'early') add('Error', 'realisation-early', 'R13', e.dst, `realisation of ${e.src} is not later than origin ${origin}`);
+    }
+    // R14
+    for (const e of g.edges) if (e.kind === 'eval') {
+      for (const b of [...g.ancestors(e.dst, ['det', 'out', 'eval'])].filter(a => N(a) && N(a).kind === 'belief' && N(a).scope.length)) {
+        for (const c of g.parents(b, ['out'])) for (const ev of evidEdges.filter(x => x.dst === c)) {
+          const hit = ev.src === e.src || g.ancestors(ev.src, ['gen', 'det']).has(e.src);
+          if (hit && !disjoint(ev.filt, e.filt)) add('Error', 'contamination', 'R14', e.src, `scored by ${e.dst} but also evidence of ${c} (filters not disjoint)`);
+        }
+      }
+    }
+    // R17
+    for (const b of [...outBeliefs, ...priorBeliefs]) {
+      const approx = has(b.tags, 'approx') || Object.keys(b.tags).some(k => k.startsWith('≈'));
+      const checks = g.children(b.name, ['check']).map(N);
+      if (approx && !checks.length) add('Warning', 'approx-unchecked', 'R17', b.name, `approximation (${b.tags.approx || ''}) not checked`);
+      const failed = checks.filter(c => c.result === 'fail'), unknown = checks.filter(c => c.result === 'unknown');
+      for (const c of failed) add('Warning', 'check-failed', 'R17', c.name, `check failed on ${b.name}: ${c.criterion}`);
+      for (const down of sortS(g.descendants(b.name, ['det', 'eval', 'out', 'gen']))) if (N(down) && ['derived', 'belief'].includes(N(down).kind)) {
+        if (failed.length) add('Warning', 'inherited-failure', 'R17', down, `inherits failed check(s) ${failed.map(c => c.name).join(', ')} on ${b.name}`);
+        else if (unknown.length) add('Unresolved', 'inherited-unknown', 'R17', down, `inherits unknown check(s) ${unknown.map(c => c.name).join(', ')} on ${b.name}`);
+      }
+    }
+    // R19
+    for (const n of nodes) if (n.tags.socket) {
+      if (has(n.tags, 'selector')) add('Stated', 'socket-bma', 'R19', n.name, `socket with selector ${n.tags.selector}: one mixture model (model averaging)`);
+      else add('Stated', 'socket-separate', 'R19', n.name, `socket without selector: a family of ${n.alts.length} separate models (${n.alts.join('; ')})`);
+    }
+    // R21
+    for (const s of nodes.filter(n => n.kind === 'derived' && has(n.tags, 'select'))) {
+      const used = evalData(g, s.name);
+      for (const r of nodes) {
+        if (r.kind !== 'derived' || r === s) continue;
+        const both = [...evalData(g, r.name)].filter(x => used.has(x));
+        if (g.ancestors(r.name, ['det', 'eval']).has(s.name) && both.length) add('Warning', 'held-out-reused', 'R21', r.name, `scored on data (${sortS(both).join(', ')}) that also drove selection ${s.name}: not a held-out estimate`);
+      }
+    }
+    // T5
+    const ALL = ['gen', 'det', 'prior', 'evid', 'out', 'eval'];
+    for (const n of nodes) if (['?', 'unknown'].includes(n.meta.decided)) add('Unresolved', 'decision-date', 'T5', n.name, 'decision date unknown');
+    for (const r of nodes) {
+      if (r.kind !== 'derived' || !g.parents(r.name, ['eval']).length) continue;
+      const scored = evalData(g, r.name);
+      for (const e of g.edges) if (e.kind === 'real' && scored.has(e.dst)) scored.add(e.src);
+      const anc = g.ancestors(r.name, ALL); anc.add(r.name);
+      const decisions = sortS(anc).filter(a => N(a) && has(N(a).meta, 'decided')).map(N);
+      if (!decisions.length) continue;
+      let verdict = 'confirmatory';
+      for (const dn of decisions) {
+        const used = (dn.meta.using || []).filter(x => scored.has(x)); const date = dn.meta.decided;
+        if (used.length) { verdict = 'exploratory'; add('Warning', 'exploratory', 'T5', r.name, `decision ${dn.name} used scored outcome(s) ${sortS(new Set(used)).join(', ')}: exploratory result`); continue; }
+        if (date === '?' || date === 'unknown') { if (verdict === 'confirmatory') verdict = 'unresolved'; continue; }
+        const bounds = [...scored].filter(x => N(x) && has(N(x).meta, 'a')).map(x => N(x).meta.a);
+        const later = bounds.filter(b => (b[0] === '>' || b[0] === '>=') && b[1][0] === 'abs');
+        if (!later.length || later.length < [...scored].filter(x => N(x) && N(x).kind === 'observed').length) {
+          if (verdict === 'confirmatory') verdict = 'unresolved';
+          add('Unresolved', 'decision-vs-outcome', 'T5', r.name, `decision ${dn.name} (${date}): availability of scored outcomes not dated, order cannot be checked`);
+        } else if (later.some(b => !(date < b[1][1] || (date === b[1][1] && b[0] === '>')))) {
+          verdict = 'exploratory'; add('Warning', 'exploratory', 'T5', r.name, `decision ${dn.name} (${date}) does not precede the scored outcomes: exploratory result`);
+        }
+      }
+      if (verdict === 'confirmatory') add('Stated', 'confirmatory', 'T5', r.name, `confirmatory: decisions ${sortS(decisions.map(x => x.name)).join(', ')} precede and exclude the scored outcomes`);
+    }
+    // R30
+    for (const b of nodes) {
+      if (b.kind !== 'belief') continue;
+      const ins = g.parents(b.name, ['det', 'gen', 'eval']).filter(x => N(x).kind !== 'fixed');
+      if (ins.length && !has(b.tags, 'constructed')) add('Error', 'belief-inputs', 'R30', b.name, `belief has inputs (${ins.join(', ')}) but no [constructed: …] tag`);
+      if (has(b.tags, 'constructed') && !b.roots.length) add('Stated', 'constructed', 'R30', b.name, `constructed (${b.tags.constructed}), not a posterior`);
+      if (has(b.tags, 'constructed') && b.roots.length) {
+        const used = [...g.ancestors(b.name, ['det', 'gen', 'eval'])].filter(a => N(a).kind === 'observed');
+        for (const c of conditions) {
+          const ev = new Set(evidEdges.filter(e => e.dst === c.name).map(e => e.src));
+          for (const x of [...ev]) for (const a of detClosure(g, x)) if (N(a).kind === 'observed') ev.add(a);
+          const both = used.filter(x => ev.has(x)); const ca = g.ancestorsAny(c.name);
+          if (both.length && b.roots.some(r => ca.has(r))) add('Stated', 'data-twice-prior', 'R30', b.name, `data used in both prior and likelihood (${sortS(both).join(', ')}) in ${c.name}`);
+        }
+      }
+    }
+    for (const [code, node, msg] of g.structural) add('Error', code, 'R18', node, msg);
+    for (const r of g.revisions) if (!r.includes('trigger') || !r.includes('change')) add('Error', 'revision', 'R20', r.split(/\s+/)[1], 'revision without trigger/change');
+    const seen = new Set(), uniq = [];
+    for (const x of d) { const k = [x.cls, x.code, x.rule, x.node, x.msg].join('\u0000'); if (!seen.has(k)) { seen.add(k); uniq.push(x); } }
+    return uniq.sort((a, b) => ((ORDER[a.cls] ?? 9) - (ORDER[b.cls] ?? 9)) || pyCmp(a.rule, b.rule) || pyCmp(a.node, b.node) || pyCmp(a.code, b.code) || pyCmp(a.msg, b.msg));
+  }
+
+  function t2(g, add, starts, o, where, tagrefs) {
+    const N = n => g.N(n); const reached = new Map(); const seen = new Set();
+    const stack = starts.map(([x, f, role]) => [x, f, role, null]);
+    const evfilt = new Map(starts.filter(([, f, role]) => role === 'evidence' && f).map(([x, f]) => [x, f]));
+    while (stack.length) {
+      let [x, f, role, series] = stack.pop();
+      const key = x + '|' + !!f + '|' + role;
+      if (!N(x) || seen.has(key)) continue; seen.add(key);
+      const filtered = !!(f && f.attr === 'a' && typeof f.hi === 'number' && f.hi <= 0);
+      const n = N(x);
+      if (n.kind === 'observed' || (n.kind === 'belief' && has(n.tags, 'borrowed'))) {
+        if (!reached.has(x)) reached.set(x, { unf: null, filt: false });
+        const r = reached.get(x);
+        if (filtered) r.filt = true; else if (r.unf === null) r.unf = role;
+        if (filtered) series = [x, f];
+        if (role === 'input') continue;
+      }
+      if (n.kind === 'condition') continue;
+      if (role === 'input' && n.kind === 'belief' && has(n.tags, 'constructed')) continue;
+      for (const u of n.meta.using || []) stack.push([u, null, `data used by decision ${x}`, null]);
+      for (const t of tagrefs.get(x) || []) stack.push([t, null, 'tag reference', null]);
+      for (const e of g.edges) if (e.dst === x && ['gen', 'det', 'prior', 'eval', 'out'].includes(e.kind)) {
+        let ef = e.filt;
+        if (!ef && e.lag && series && e.src === series[0]) ef = series[1];
+        if (!ef && e.lag && evfilt.has(e.src)) ef = evfilt.get(e.src);
+        const nrole = (role.startsWith('data used') || role === 'input') ? role : 'covariate/ancestor';
+        stack.push([e.src, ef, nrole, series]);
+      }
+    }
+    for (const x of sortS(reached.keys())) {
+      const r = reached.get(x); const meta = N(x).meta;
+      if (r.filt && meta.a && meta.a[0] === 'unknown') add('Unresolved', 'availability', "T2'", x, `filtered [a <= ${o}] into ${where}, but availability of its values is not recorded: pseudo-prospective`);
+      if (r.unf === null) continue;
+      const status = avail(meta, o, false, g.originAfter[o]);
+      if (status === 'late') add('Error', 'look-ahead', "T2'", x, `available at ${fmtA(meta.a)} > ${o} but enters ${where}` + (has(meta, 'e') ? ' (event time before the origin does not make it admissible, T3)' : ''));
+      else if (status === 'unknown') add('Unresolved', 'availability', "T2'", x, `${r.unf} of ${where}: reached without filter, no a <= ${o} established: pseudo-prospective`);
+    }
+  }
+  function detClosure(g, name) {
+    const seen = new Set(), stack = [name];
+    while (stack.length) { const cur = stack.pop(); for (const p of g.parents(cur, ['det'])) if (!seen.has(p)) { seen.add(p); if (g.N(p).kind !== 'observed') stack.push(p); } }
+    return seen;
+  }
+  const fmtA = a => (a[1][0] === 'abs' ? a[1][1] : `${a[1][0]}${a[1][1] >= 0 ? '+' : ''}${fmtNum(a[1][1])}`);
+  function avail(meta, origin, strict, after) {
+    if (!meta.a || meta.a[0] === 'unknown') return 'unknown';
+    const [op, [sym, off]] = meta.a;
+    if (sym === 'abs' && after && !strict) return (['<=', '<', '='].includes(op) && off <= after) ? 'ok' : 'unknown';
+    if (sym !== origin) return 'unknown';
+    if (strict) return (op === '=' && off > 0) ? 'ok' : 'early';
+    if (op === '=') return off > 0 ? 'late' : 'ok';
+    if (op === '<=' || op === '<') return off <= 0 ? 'ok' : 'unknown';
+    return 'unknown';
+  }
+  function disjoint(f1, f2) {
+    if (!f1 || !f2 || f1.attr !== f2.attr) return false;
+    if (f1.hi != null && f2.lo != null && (f1.hi < f2.lo || (f1.hi === f2.lo && !(f1.hiIncl && f2.loIncl)))) return true;
+    if (f2.hi != null && f1.lo != null && (f2.hi < f1.lo || (f2.hi === f1.lo && !(f2.hiIncl && f1.loIncl)))) return true;
+    return false;
+  }
+  function originOfPrediction(g, pred) {
+    for (const b of g.nodes.values()) if (b.kind === 'belief' && b.scope.includes(pred)) for (const c of g.parents(b.name, ['out'])) if (g.N(c).origin) return g.N(c).origin;
+    return null;
+  }
+  function evalData(g, name) {
+    const out = new Set(); const anc = g.ancestors(name, ['det', 'eval']); anc.add(name);
+    for (const a of anc) for (const e of g.edges) if (e.dst === a && e.kind === 'eval') out.add(e.src);
+    return out;
+  }
+  function isIndicator(g, name) {
+    const re = new RegExp('\\b' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
+    for (const n of g.nodes.values()) for (const k of ['obs', 'cens']) if (has(n.tags, k) && re.test(String(n.tags[k]))) return true;
+    return false;
+  }
+  function tagReferences(g) {
+    const refs = new Map();
+    for (const n of g.nodes.values()) for (const k of ['cens', 'trunc', 'obs']) if (has(n.tags, k))
+      for (const id of String(n.tags[k]).match(/[A-Za-z_]\w*/g) || [])
+        if (g.nodes.has(id) && id !== n.name && g.N(id).kind === 'observed') { if (!refs.has(n.name)) refs.set(n.name, new Set()); refs.get(n.name).add(id); }
+    return refs;
+  }
+
+  // ------------------------------------------------------------------ labels
+  const GREEK = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', theta: 'θ', lambda: 'λ', mu: 'μ', nu: 'ν',
+    sigma: 'σ', tau: 'τ', phi: 'φ', psi: 'ψ', omega: 'ω', rho: 'ρ', kappa: 'κ', eta: 'η', pi: 'π', xi: 'ξ', zeta: 'ζ', chi: 'χ' };
+  const SUBCH = '0123456789ijklmnotaeruvx', SUBTO = '₀₁₂₃₄₅₆₇₈₉ᵢⱼₖₗₘₙₒₜₐₑᵣᵤᵥₓ';
+  const sub = s => [...s].map(c => (SUBCH.includes(c) ? [...SUBTO][SUBCH.indexOf(c)] : c)).join('');
+  function label(name, plates = []) {
+    let b = name, deco = '';
+    for (const [suf, dd] of [['_new', '\u0303'], ['_hat', '\u0302'], ['_star', '*']]) if (b.endsWith(suf)) { b = b.slice(0, -suf.length); deco = dd; }
+    const m = b.match(/^([a-z]+)(\d+)$/);
+    if (m && GREEK[m[1]] && !deco) return GREEK[m[1]] + sub(m[2]) + sub(plates.join(''));
+    if (deco && b.includes('_')) return name;
+    const parts = [b.slice(0, b.includes('_') ? b.indexOf('_') : b.length), b.includes('_') ? b.slice(b.indexOf('_') + 1) : null];
+    let head = GREEK[parts[0]] || parts[0];
+    if (deco && deco !== '*') head = head[0] + deco + head.slice(1); else if (deco === '*') head += '*';
+    let s = '';
+    if (parts[1] != null) s = [...parts[1]].every(c => SUBCH.includes(c)) ? sub(parts[1]) : '_' + parts[1];
+    return head + s + sub(plates.join(''));
+  }
+  const relabel = t => t.replace(/[A-Za-z_]\w*/g, w => (GREEK[w] || (/^[a-z]+\d+$/.test(w) && GREEK[w.replace(/\d+/g, '')]) || /^\w+_(new|hat|star)$/.test(w)) ? label(w) : w);
+
+  // ------------------------------------------------------------------ layout (port of render.layout)
+  const DX = 2.2, DY = 1.55;
+  const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
+  function layout(g) {
+    const N = n => g.N(n); const names = [...g.nodes.keys()];
+    const origins = {}; for (const c of g.nodes.values()) if (c.kind === 'condition' && c.origin) origins[c.name] = c.origin;
+    const late = (x, cond) => { const a = N(x) && N(x).meta.a; return !!(a && a[0] === '=' && a[1][0] === origins[cond] && a[1][1] > 0); };
+    const kindsAll = ['prior', 'gen', 'det', 'evid', 'out', 'eval', 'check', 'real', 'via'];
+    const edges = g.edges.filter(e => kindsAll.includes(e.kind) && g.nodes.has(e.src) && g.nodes.has(e.dst) && !e.lag);
+    const layerEdges = edges.filter(e => !(e.kind === 'evid' && late(e.src, e.dst)));
+    const layer = {}; names.forEach(n => (layer[n] = 0));
+    for (let it = 0; it <= names.length; it++) {
+      let changed = false;
+      for (const e of layerEdges) if (layer[e.dst] < layer[e.src] + 1) { layer[e.dst] = layer[e.src] + 1; changed = true; }
+      for (const c in origins) for (const x of names) if (N(x).kind === 'observed' && late(x, c) && layer[x] <= layer[c]) { layer[x] = layer[c] + 1; changed = true; }
+      for (const v of g.plates.keys()) {
+        const mem = names.filter(n => N(n).plates.includes(v));
+        const feeders = layerEdges.filter(e => mem.includes(e.dst) && !N(e.src).plates.includes(v)).map(e => e.src);
+        if (mem.length && feeders.length) {
+          const shift = Math.max(...feeders.map(f => layer[f])) + 1 - Math.min(...mem.map(m => layer[m]));
+          if (shift > 0) { mem.forEach(m => (layer[m] += shift)); changed = true; }
+        }
+      }
+      if (!changed) break;
+    }
+    for (const n of g.nodes.values()) if (n.kind === 'fixed') {
+      const out = edges.filter(e => e.src === n.name);
+      if (out.length && !out.some(e => N(e.dst).plates.some(p => !n.plates.includes(p)))) layer[n.name] = Math.max(0, Math.min(...out.map(e => layer[e.dst])) - 1);
+    }
+    const pk = n => N(n).plates.join('/');
+    const cells = new Map();
+    for (const n of names) { const k = pk(n) + '#' + layer[n]; if (!cells.has(k)) cells.set(k, { p: pk(n), L: layer[n], ns: [] }); cells.get(k).ns.push(n); }
+    const paths = [...new Set(names.map(pk))].sort((a, b) => pyCmp(a.split('/')[0], b.split('/')[0]) || (a.split('/').length - b.split('/').length) || pyCmp(a, b));
+    const height = {}; for (const p of paths) height[p] = Math.max(...[...cells.values()].filter(c => c.p === p).map(c => c.ns.length));
+    let top = 0; const offp = {}; for (const p of paths) { offp[p] = top; top -= height[p] * DY + (p ? 0.6 : 0.3); }
+    const nbr = {}; names.forEach(n => (nbr[n] = []));
+    for (const e of edges) { nbr[e.dst].push(e.src); nbr[e.src].push(e.dst); }
+    const colCount = {}; for (const c of cells.values()) colCount[c.L] = (colCount[c.L] || 0) + 1;
+    const mixed = new Set(Object.keys(colCount).filter(L => colCount[L] > 1).map(Number));
+    const related = (p, q) => !!p && !!q && (p === q || p.startsWith(q + '/') || q.startsWith(p + '/'));
+    const crowded = new Set();
+    for (const p of paths) {
+      if (!p) continue;
+      const cols = names.filter(n => pk(n) === p || pk(n).startsWith(p + '/')).map(n => layer[n]);
+      const lo = Math.min(...cols), hi = Math.max(...cols);
+      if (names.some(n => layer[n] >= lo && layer[n] <= hi && !related(p, pk(n)))) crowded.add(p);
+    }
+    const banded = c => mixed.has(c.L) || crowded.has(c.p);
+    const off = c => (banded(c) ? offp[c.p] : 0);
+    const y = {};
+    for (const c of cells.values()) [...c.ns].sort((a, b) => N(a).line - N(b).line).forEach((n, i) => (y[n] = off(c) - i * DY));
+    for (let it = 0; it < 4; it++) for (const c of cells.values()) {
+      const bc = {}; for (const n of c.ns) bc[n] = nbr[n].length ? mean(nbr[n].map(m => y[m])) : y[n];
+      [...c.ns].sort((a, b) => bc[b] - bc[a]).forEach((n, i) => (y[n] = off(c) - i * DY));
+    }
+    for (const c of cells.values()) { const slack = banded(c) ? (height[c.p] - c.ns.length) * DY / 2 : (c.ns.length - 1) * -DY / 2; for (const n of c.ns) y[n] -= slack; }
+    const plateCols = new Set(names.filter(n => crowded.has(pk(n))).map(n => layer[n]));
+    const free = [...new Set(Object.values(layer))].filter(L => !mixed.has(L) && !plateCols.has(L)).sort((a, b) => a - b);
+    for (let it = 0; it < 3; it++) for (const L of free) {
+      const ns = names.filter(n => layer[n] === L); if (!ns.length) continue;
+      const want = {}; for (const n of ns) want[n] = nbr[n].length ? mean(nbr[n].map(m => y[m])) : y[n];
+      const order = [...ns].sort((a, b) => want[b] - want[a]); const ys = []; let prev = null;
+      for (const n of order) { const v = prev === null ? want[n] : Math.min(want[n], prev - DY); ys.push(v); prev = v; }
+      const shift = mean(order.map(n => want[n])) - mean(ys); order.forEach((n, i) => (y[n] = ys[i] + shift));
+    }
+    const pos = {}; for (const n of names) pos[n] = [layer[n] * DX, y[n]];
+    const hidden = new Set(names.filter(n => N(n).kind === 'fixed' && !edges.some(e => e.src === n || e.dst === n) &&
+      [...g.plates.values()].some(r => new RegExp('\\b' + n + '\\b').test(r))));
+    return { pos, layer, edges, origins, hidden };
+  }
+
+  // ------------------------------------------------------------------ SVG renderer
+  const R = 0.3, SC = 60; // world units -> px
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  function argsOf(g, name, kind) { const p = g.pending.find(x => x[0] === name && x[1] === kind); return p ? p[2] : ''; }
+  function familyText(g, n) {
+    const p = g.pending.find(x => x[0] === n.name); if (!p) return '';
+    const [, kind, args] = p; const f = kind === 'gen' ? n.family : n.func; if (!f) return '';
+    if (kind === 'gen') return `${f}(${args})`;
+    return `${f}(${args.replace(/\beval\s+/g, '').replace(/\s+\[[^\]]*\]/g, '')})`;
+  }
+  function timeText(n) {
+    const out = [];
+    for (const k of ['e', 'a']) {
+      const v = n.meta[k]; if (!v) continue;
+      if (v[0] === 'unknown') { out.push(`${k}: ?`); continue; }
+      const [sym, off] = v[1];
+      const t = sym === 'abs' ? off : sym + (off === 0 ? '' : off > 0 ? `+${fmtNum(off)}` : `−${fmtNum(-off)}`);
+      out.push(`${k} ${v[0].replace('<=', '≤').replace('>=', '≥')} ${t}`);
+    }
+    if (n.meta.decided) out.push(`decided: ${n.meta.decided}`);
+    if (n.meta.using && n.meta.using.length) out.push(`using: ${n.meta.using.join(', ')}`);
+    return out.join(', ');
+  }
+  function tagsText(n) {
+    return Object.entries(n.tags).filter(([k]) => !['learned', 'socket', 'selector'].includes(k))
+      .map(([k, v]) => (k === 'approx' ? `[≈ ${v}]` : v === true ? `[${k}]` : `[${k}: ${v}]`)).join('   ');
+  }
+  function wrap(s, w = 34) {
+    const words = s.split(' '), lines = []; let cur = '';
+    for (const wd of words) { if ((cur + ' ' + wd).trim().length > w && cur) { lines.push(cur); cur = wd; } else cur = (cur + ' ' + wd).trim(); }
+    if (cur) lines.push(cur); return lines;
+  }
+  const radius = n => ({ belief: 0.5, condition: 0.1, fixed: 0.15, derived: 0.38, check: 0.38 }[n.kind] ?? R);
+
+  function renderSVG(g, opts = {}) {
+    const { pos, edges, origins, hidden } = layout(g); const N = n => g.N(n);
+    for (const h of hidden) delete pos[h];
+    // keep edges off nodes they do not touch
+    const dist = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy; let t = L2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2 : 0; t = Math.max(0, Math.min(1, t)); return [Math.hypot(a[0] + t * dx - p[0], a[1] + t * dy - p[1]), t]; };
+    const nudged = {};
+    for (let it = 0; it < 6; it++) {
+      let moved = false;
+      for (const e of edges) {
+        if (!pos[e.src] || !pos[e.dst]) continue;
+        for (const nn of Object.keys(pos)) {
+          if (nn === e.src || nn === e.dst) continue;
+          const [dd, t] = dist(pos[nn], pos[e.src], pos[e.dst]);
+          if (dd < 0.45 && t > 0.05 && t < 0.95) {
+            const mover = !N(e.dst).plates.length ? e.dst : (!N(e.src).plates.length ? e.src : null);
+            if (!mover || (nudged[mover] || 0) >= 1) continue; nudged[mover] = (nudged[mover] || 0) + 1;
+            const side = pos[mover][1] <= pos[nn][1] ? -1 : 1; pos[mover] = [pos[mover][0], pos[mover][1] + side * DY * 0.6]; moved = true;
+          }
+        }
+      }
+      if (!moved) break;
+    }
+    const ghosts = {};
+    for (const n of g.nodes.values()) if (n.kind === 'observed' && edges.some(e => e.src === n.name && e.kind === 'evid') && edges.some(e => e.src === n.name && e.kind === 'eval')) {
+      const ts = edges.filter(e => e.src === n.name && e.kind === 'eval').map(e => pos[e.dst]);
+      ghosts[n.name] = [Math.min(...ts.map(p => p[0])) - DX * 0.8, Math.min(...ts.map(p => p[1])) - DY * 1.1];
+    }
+    const all = [...Object.values(pos), ...Object.values(ghosts)];
+    const x0 = Math.min(...all.map(p => p[0])) - 1.6, x1 = Math.max(...all.map(p => p[0])) + 2.0;
+    const y0 = Math.min(...all.map(p => p[1])) - 1.9, y1 = Math.max(...all.map(p => p[1])) + 1.4;
+    const X = x => ((x - x0) * SC).toFixed(1), Y = y => ((y1 - y) * SC).toFixed(1);
+    const W = (x1 - x0) * SC, H = (y1 - y0) * SC;
+    const o = [];
+    const txt = (x, y, s, { size = 12, anchor = 'middle', italic = false, cls = 'ink', weight = 'normal', base = 'middle' } = {}) =>
+      o.push(`<text x="${X(x)}" y="${Y(y)}" font-size="${size}" text-anchor="${anchor}" dominant-baseline="${base}" class="${cls}"${italic ? ' font-style="italic"' : ''}${weight !== 'normal' ? ` font-weight="${weight}"` : ''}>${esc(s)}</text>`);
+    const lines = (x, y, arr, opt, dy = 0.24) => arr.forEach((s, i) => txt(x, y - i * dy, s, opt));
+    // plates
+    const depth = {}; for (const n of g.nodes.values()) n.plates.forEach((v, i) => (depth[v] = Math.max(depth[v] || 0, i)));
+    const maxd = Math.max(0, ...Object.values(depth));
+    for (const [v, rng] of g.plates) {
+      const mem = [...g.nodes.values()].filter(n => n.plates.includes(v) && pos[n.name]).map(n => pos[n.name]); if (!mem.length) continue;
+      const pad = 0.75 + 0.3 * (maxd - (depth[v] || 0));
+      const a = Math.min(...mem.map(p => p[0])) - pad, b = Math.max(...mem.map(p => p[0])) + pad;
+      const c = Math.min(...mem.map(p => p[1])) - pad - 0.5, d = Math.max(...mem.map(p => p[1])) + pad;
+      o.push(`<rect x="${X(a)}" y="${Y(d)}" width="${((b - a) * SC).toFixed(1)}" height="${((d - c) * SC).toFixed(1)}" class="plate"/>`);
+      txt(b - 0.08, c + 0.14, `${v} ∈ ${rng.replace('..', '…')}`, { size: 11, anchor: 'end' });
+    }
+    for (const c in origins) { const fx = pos[c][0] + DX * 0.5; o.push(`<line x1="${X(fx)}" y1="${Y(y1 - 0.4)}" x2="${X(fx)}" y2="${Y(y0 + 0.4)}" class="frontier"/>`); txt(fx, y1 - 0.25, origins[c], { size: 11, cls: 'muted' }); }
+    // edges
+    const head = (tip, d, style) => {
+      const nx = -d[1], ny = d[0], bx = tip[0] - d[0] * 0.22, by = tip[1] - d[1] * 0.22;
+      const P = [[bx + nx * 0.11, by + ny * 0.11], tip, [bx - nx * 0.11, by - ny * 0.11]].map(p => `${X(p[0])},${Y(p[1])}`).join(' ');
+      if (style === 'open') o.push(`<polyline points="${P}" class="stroke" fill="none"/>`);
+      else o.push(`<polygon points="${P}" class="${style === 'solid' ? 'fillink' : 'hollow'}"/>`);
+    };
+    const edge = (p, q, kind, r1, r2) => {
+      const L0 = Math.hypot(q[0] - p[0], q[1] - p[1]); if (!L0) return; const d = [(q[0] - p[0]) / L0, (q[1] - p[1]) / L0], nv = [-d[1], d[0]];
+      const a = [p[0] + d[0] * r1, p[1] + d[1] * r1], b = [q[0] - d[0] * (r2 + 0.03), q[1] - d[1] * (r2 + 0.03)];
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (kind === 'gen') {
+        const pts = []; for (let i = 0; i <= 120; i++) { const t = (L - 0.05) * i / 120, w = Math.sin(t * 2 * Math.PI / 0.25) * 0.05; pts.push(`${X(a[0] + d[0] * t + nv[0] * w)},${Y(a[1] + d[1] * t + nv[1] * w)}`); }
+        o.push(`<polyline points="${pts.join(' ')}" class="stroke" fill="none"/>`); head(b, d, 'open');
+      } else if (kind === 'det') {
+        const e = [b[0] - d[0] * 0.2, b[1] - d[1] * 0.2]; o.push(`<line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(e[0])}" y2="${Y(e[1])}" class="stroke"/>`); head(b, d, 'solid');
+      } else if (kind === 'eval') {
+        const e = [b[0] - d[0] * 0.22, b[1] - d[1] * 0.22]; o.push(`<line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(e[0])}" y2="${Y(e[1])}" class="dotted"/>`); head(b, d, 'hollow');
+      } else if (kind === 'real') {
+        o.push(`<line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(b[0])}" y2="${Y(b[1])}" class="thin"/>`);
+        const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+        for (const s of [-0.05, 0.05]) { const c = [m[0] + d[0] * s, m[1] + d[1] * s]; o.push(`<line x1="${X(c[0] - nv[0] * 0.12)}" y1="${Y(c[1] - nv[1] * 0.12)}" x2="${X(c[0] + nv[0] * 0.12)}" y2="${Y(c[1] + nv[1] * 0.12)}" class="stroke"/>`); }
+      }
+    };
+    for (const e of edges) {
+      if (!pos[e.src] || !pos[e.dst]) continue;
+      let p = pos[e.src]; const q = pos[e.dst];
+      if (e.kind === 'eval' && ghosts[e.src]) p = ghosts[e.src];
+      if (e.kind === 'via') {
+        o.push(`<line x1="${X(p[0])}" y1="${Y(p[1])}" x2="${X(q[0])}" y2="${Y(q[1])}" class="via"/>`);
+        txt((p[0] + q[0]) / 2, (p[1] + q[1]) / 2 + 0.15, 'via model', { size: 9, italic: true, cls: 'muted' }); continue;
+      }
+      let kind = { prior: 'gen', gen: 'gen', det: 'det', evid: 'det', out: 'det', eval: 'eval', check: 'det', real: 'real' }[e.kind];
+      if (kind === 'gen' && N(e.dst).kind === 'derived') kind = 'det';
+      edge(p, q, kind, radius(N(e.src)), radius(N(e.dst)));
+      if (e.filt) { const m = [p[0] + 0.35 * (q[0] - p[0]), p[1] + 0.35 * (q[1] - p[1])]; txt(m[0], m[1] + 0.2, `[${e.filt.raw.replace(/<=/g, '≤')}]`, { size: 10, cls: 'muted' }); }
+    }
+    // nodes
+    const circle = (x, y, cls) => o.push(`<circle cx="${X(x)}" cy="${Y(y)}" r="${(R * SC).toFixed(1)}" class="${cls}"/>`);
+    const diamond = (x, y) => { const r = R * 1.15; o.push(`<polygon points="${X(x)},${Y(y + r)} ${X(x + r)},${Y(y)} ${X(x)},${Y(y - r)} ${X(x - r)},${Y(y)}" class="open"/>`); };
+    for (const [gn, [gx, gy]] of Object.entries(ghosts)) {
+      circle(gx, gy, 'solidnode');
+      const ef = edges.find(e => e.src === gn && e.kind === 'eval' && e.filt), vf = edges.find(e => e.src === gn && e.kind === 'evid' && e.filt);
+      lines(gx, gy - 0.55, [`${label(gn, N(gn).plates)}, values with ${ef ? ef.filt.raw.replace(/<=/g, '≤') : 'evaluation window'}`, ...(vf ? [`(disjoint from evidence: ${vf.filt.raw.replace(/<=/g, '≤')})`] : [])], { size: 10 });
+    }
+    for (const n of g.nodes.values()) {
+      if (!pos[n.name]) continue; const [x, yy] = pos[n.name]; const nm = label(n.name, n.plates);
+      if (n.stub) {
+        o.push('<g class="stub">');
+        if (n.kind === 'fixed') { const s = R * 0.45; o.push(`<rect x="${X(x - s)}" y="${Y(yy + s)}" width="${(2 * s * SC).toFixed(1)}" height="${(2 * s * SC).toFixed(1)}" class="fillink"/>`); }
+        else if (n.kind === 'derived' || n.kind === 'check') diamond(x, yy);
+        else if (n.kind === 'condition') o.push(`<rect x="${X(x - 0.06)}" y="${Y(yy + R * 1.3)}" width="${(0.12 * SC).toFixed(1)}" height="${(2.6 * R * SC).toFixed(1)}" class="fillink"/>`);
+        else if (n.kind === 'belief') { const pts = []; for (let i = 0; i <= 40; i++) { const t = -1 + 2 * i / 40; pts.push(`${X(x + t * R * 1.05)},${Y(yy - R * 0.55 + Math.exp(-3 * t * t) * R * 1.3)}`); } o.push(`<polyline points="${pts.join(' ')}" class="stroke2" fill="none"/><line x1="${X(x - R * 1.5)}" y1="${Y(yy - R * 0.55)}" x2="${X(x + R * 1.5)}" y2="${Y(yy - R * 0.55)}" class="stroke2"/>`); }
+        else if (n.kind === 'predicted') { circle(x, yy, 'open'); o.push(`<path d="M ${X(x)} ${Y(yy + R)} A ${R * SC} ${R * SC} 0 0 1 ${X(x)} ${Y(yy - R)} Z" class="fillink"/>`); }
+        else circle(x, yy, n.kind === 'observed' ? 'solidnode' : 'open');
+        o.push('</g>');
+        const lab = n.kind === 'belief' && n.scope.length ? `${n.name}(${n.scope.map(s => label(s)).join(', ')})` : nm;
+        txt(x, yy - 0.55, `${lab}  → ${n.stub}`, { size: 11, cls: 'muted' });
+        const tt = timeText(n); if (tt) txt(x, yy - 0.8, tt, { size: 10, italic: true, cls: 'muted' });
+        continue;
+      }
+      if (n.kind === 'fixed') { const s = R * 0.45; o.push(`<rect x="${X(x - s)}" y="${Y(yy + s)}" width="${(2 * s * SC).toFixed(1)}" height="${(2 * s * SC).toFixed(1)}" class="fillink"/>`); txt(x, yy - 0.38, n.value ? `${nm} = ${n.value}` : nm); }
+      else if (n.kind === 'unknown') { circle(x, yy, 'open'); txt(x, yy - 0.55, nm); }
+      else if (n.kind === 'observed') { circle(x, yy, 'solidnode'); txt(x, yy - 0.55, n.value ? `${nm} = ${n.value}` : nm); }
+      else if (n.kind === 'predicted') {
+        circle(x, yy, 'open'); o.push(`<path d="M ${X(x)} ${Y(yy + R)} A ${R * SC} ${R * SC} 0 0 1 ${X(x)} ${Y(yy - R)} Z" class="fillink"/>`); txt(x, yy - 0.55, nm);
+      } else if (n.kind === 'derived') {
+        diamond(x, yy); txt(x, yy - 0.62, nm);
+        if (n.tags.socket) { o.push(`<rect x="${X(x - 0.9)}" y="${Y(yy + 0.7)}" width="${(1.8 * SC).toFixed(1)}" height="${(1.6 * SC).toFixed(1)}" rx="10" class="socket"/>`); txt(x, yy - 1.12, n.alts.join(' | '), { size: 10, italic: true }); }
+      } else if (n.kind === 'belief') {
+        const pts = []; for (let i = 0; i <= 40; i++) { const t = -1 + 2 * i / 40; pts.push(`${X(x + t * R * 1.05)},${Y(yy - R * 0.55 + Math.exp(-3 * t * t) * R * 1.3)}`); }
+        o.push(`<polyline points="${pts.join(' ')}" class="stroke2" fill="none"/><line x1="${X(x - R * 1.5)}" y1="${Y(yy - R * 0.55)}" x2="${X(x + R * 1.5)}" y2="${Y(yy - R * 0.55)}" class="stroke2"/>`);
+        txt(x, yy - 0.5, n.scope.length ? `${n.name}(${n.scope.map(s => label(s)).join(', ')})` : n.roots.length ? `(${n.roots.map(r => label(r)).join(', ')})` : nm);
+      } else if (n.kind === 'condition') {
+        o.push(`<rect x="${X(x - 0.06)}" y="${Y(yy + R * 1.3)}" width="${(0.12 * SC).toFixed(1)}" height="${(2.6 * R * SC).toFixed(1)}" class="fillink"/>`);
+        if (n.origin) txt(x, yy - 0.62, `@${n.origin}`);
+      } else if (n.kind === 'check') {
+        diamond(x, yy); txt(x, yy, { pass: '✓', fail: '×', unknown: '?', report: '≡' }[n.result] || '?', { size: 15, weight: 'bold' });
+        txt(x, yy + 0.55, `criterion: ${n.criterion}`, { size: 10 }); continue;
+      }
+      const tt = timeText(n); if (tt) txt(x, yy - 0.8, tt, { size: 10, italic: true });
+      const fam = ['unknown', 'observed', 'predicted', 'derived', 'belief'].includes(n.kind) ? familyText(g, n) : '';
+      const top = [fam, tagsText(n)].filter(Boolean).flatMap(t => wrap(relabel(t)));
+      top.reverse().forEach((s, i) => txt(x, yy + (n.kind === 'belief' ? 0.42 : 0.45) + i * 0.24, s, { size: 10, italic: true }));
+    }
+    if (opts.diagnostics) {
+      const col = { Error: 'err', Warning: 'warn', Unresolved: 'unres' }, mark = { Error: '!', Warning: '!', Unresolved: '?' }, count = {};
+      for (const dg of (opts.diags || validate(g))) {
+        if (!col[dg.cls] || !pos[dg.node]) continue; const k = count[dg.node] = (count[dg.node] || 0) + 1;
+        const [x, yy] = pos[dg.node]; const bx = x + 0.5 + 0.34 * (k - 1), by = yy;
+        o.push(`<circle cx="${X(bx)}" cy="${Y(by)}" r="9" class="badge ${col[dg.cls]}"><title>${esc(dg.cls + ': ' + dg.msg)}</title></circle>`);
+        txt(bx, by, mark[dg.cls], { size: 11, weight: 'bold', cls: 'badgeink' });
+      }
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(0)} ${H.toFixed(0)}" width="${W.toFixed(0)}" height="${H.toFixed(0)}" class="sagfig" role="img">${o.join('')}</svg>`;
+  }
+
+  // ------------------------------------------------------------------ maths (port of latex.py, for MathJax)
+  const GK = new Set(Object.keys(GREEK));
+  function sym(name, idx = '') {
+    let deco = null;
+    for (const [suf, d] of [['_new', '\\tilde'], ['_hat', '\\hat'], ['_star', '*']]) if (name.endsWith(suf) && !name.slice(0, -suf.length).includes('_')) { name = name.slice(0, -suf.length); deco = d; }
+    let core, s = ''; const m = name.match(/^([A-Za-z]+)(\d*)$/);
+    if (m && (GK.has(m[1]) || m[1].length === 1)) { core = GK.has(m[1]) ? '\\' + m[1] : m[1]; s = m[2]; }
+    else {
+      const i = name.indexOf('_'); const p0 = i < 0 ? name : name.slice(0, i);
+      if (i >= 0 && (GK.has(p0) || p0.length === 1)) { core = GK.has(p0) ? '\\' + p0 : p0; s = '\\mathrm{' + name.slice(i + 1).replace(/_/g, '\\_') + '}'; }
+      else core = '\\mathit{' + name.replace(/_/g, '\\_') + '}';
+    }
+    if (deco === '*') core += '^{*}'; else if (deco) core = `${deco}{${core}}`;
+    const subs = [s, idx].filter(Boolean).join(',');
+    return core + (subs ? `_{${subs}}` : '');
+  }
+  const FUNCS = { exp: '\\exp', log: '\\log', inv_logit: '\\operatorname{logit}^{-1}', sqrt: '\\sqrt' };
+  function expr(t, g) {
+    return t.replace(/([A-Za-z_]\w*)(\[[^\]]*\])?/g, (all, name, idx) => {
+      if (FUNCS[name]) return FUNCS[name];
+      if (g.nodes.has(name) || GK.has(name) || /^[a-z]+\d+$/.test(name) || name.length === 1) return sym(name, idx ? idx.slice(1, -1).replace(/ /g, '') : '');
+      return '\\mathrm{' + name.replace(/_/g, '\\_') + '}' + (idx ? `_{${idx.slice(1, -1)}}` : '');
+    }).replace(/\*/g, '\\cdot ').replace(/<=/g, '\\le ').replace(/>=/g, '\\ge ');
+  }
+  const fam = f => '\\mathrm{' + f.replace(/_/g, '\\_') + '}';
+  const texEsc = s => String(s).replace(/<=/g, '≤').replace(/>=/g, '≥').replace(/([_#%&$])/g, '\\$1').replace(/[{}]/g, m => '\\' + m);
+  const anaPlates = g => new Set([...g.plates.keys()].filter(v => [...g.nodes.values()].some(n => n.kind === 'condition' && n.plates.includes(v))));
+  function range(g, v) {
+    const rng = g.plates.get(v); const m = rng.match(/^\s*(\S+)\.\.(\S+)\s*$/);
+    return m ? `\\prod_{${v}=${expr(m[1], g)}}^{${expr(m[2], g)}}` : `\\prod_{${v}\\in \\mathrm{${texEsc(rng)}}}`;
+  }
+  function conjugate(g, cond, belief) {
+    const N = n => g.N(n); const scope = N(belief).scope;
+    const ev = g.edges.filter(e => e.kind === 'evid' && e.dst === cond).map(e => e.src);
+    const num = t => { t = t.trim(); const v = Number(t); if (t !== '' && !isNaN(v)) return v; const n = N(t); return n && n.value != null && !isNaN(Number(n.value)) ? Number(n.value) : null; };
+    for (const pb of [...g.nodes.values()].filter(b => b.kind === 'belief' && b.roots.length === 1 && b.family === 'Beta')) {
+      const p = pb.roots[0]; const [a, bb] = splitTop(argsOf(g, pb.name, 'gen')).map(num);
+      for (const y of ev) {
+        const yn = N(y); if (yn.family !== 'Binomial' || yn.value == null) continue;
+        const [n_, pp] = splitTop(argsOf(g, y, 'gen')); const n = num(n_);
+        if (pp.trim() !== p || n == null || a == null || bb == null) continue;
+        const k = Number(yn.value), a2 = a + k, b2 = bb + n - k;
+        if (scope.length === 1 && scope[0] === p) return `${sym(p)} \\mid ${sym(y)} \\sim \\mathrm{Beta}(${a2}, ${b2})`;
+        if (scope.length === 1 && N(scope[0]).kind === 'predicted' && N(scope[0]).family === 'Binomial') {
+          const [m_, p2] = splitTop(argsOf(g, scope[0], 'gen')); const m = num(m_);
+          if (p2.trim() === p && m != null) return `${sym(scope[0])} \\mid ${sym(y)} \\sim \\mathrm{BetaBinomial}(${m}, ${a2}, ${b2}),\\quad \\mathbb{E} = ${(m * a2 / (a2 + b2)).toFixed(2)}`;
+        }
+      }
+    }
+    return null;
+  }
+  function maths(g) {
+    const N = n => g.N(n); const ana = anaPlates(g); const items = [];
+    const idxOf = n => n.plates.join(',');
+    for (const b of g.nodes.values()) if (b.kind === 'belief' && b.roots.length) {
+      const sc = b.roots.map(r => sym(r)).join(', ');
+      items.push([[], b.family && b.family !== '?' ? `${fam(b.family)}(${sc} \\mid ${expr(argsOf(g, b.name, 'gen'), g)})` : `p(${sc})`]);
+    }
+    for (const n of g.nodes.values()) {
+      const path = n.plates.filter(v => !ana.has(v));
+      if (['unknown', 'observed', 'predicted'].includes(n.kind) && n.family) {
+        const me = sym(n.name, idxOf(n)); let f;
+        if (n.family === '?') f = `p(${me} \\mid ${g.parents(n.name, ['gen']).map(p => sym(p)).join(', ')})\\,[\\text{family missing}]`;
+        else f = `${fam(n.family)}(${me} \\mid ${expr(argsOf(g, n.name, 'gen'), g)})`;
+        const cm = String(n.tags.cens || '').match(/\bif\s+([A-Za-z_]\w*)\s*=\s*0/), lim = String(n.tags.cens || '').match(/>\s*([A-Za-z_]\w*)/);
+        if (cm && lim) { const dd = sym(cm[1], idxOf(n)), c = sym(lim[1], idxOf(n)); f = `\\big[${f}\\big]^{${dd}}\\big[1-F_{${fam(n.family)}}(${c} \\mid ${expr(argsOf(g, n.name, 'gen'), g)})\\big]^{1-${dd}}`; }
+        items.push([path, f]);
+      }
+    }
+    for (const n of g.nodes.values()) if (n.kind === 'derived' && !n.tags.socket && n.func &&
+      ![...g.ancestors(n.name, ['det', 'eval', 'out'])].some(a => ['belief', 'condition'].includes(N(a).kind)) &&
+      [...g.descendants(n.name, ['gen', 'det'])].some(x => ['unknown', 'observed', 'predicted'].includes(N(x).kind)))
+      items.push([n.plates.filter(v => !ana.has(v)), `\\delta\\big(${sym(n.name, idxOf(n))} - ${fam(n.func)}(${expr(argsOf(g, n.name, 'det'), g)})\\big)`]);
+    const nest = (path) => {
+      const k = path.join('/'); const here = items.filter(([p]) => p.join('/') === k).map(([, f]) => f);
+      const kids = [...new Set(items.filter(([p]) => p.length > path.length && p.slice(0, path.length).join('/') === k).map(([p]) => p[path.length]))].sort();
+      const parts = [...here]; for (const v of kids) { const inner = nest([...path, v]); parts.push(/ |\\big/.test(inner) ? `${range(g, v)}\\Bigl[${inner}\\Bigr]` : `${range(g, v)} ${inner}`); }
+      return parts.length ? parts.join('\\,') : '1';
+    };
+    const model = 'p_M = ' + nest([]);
+    const cond = [];
+    for (const c of g.nodes.values()) if (c.kind === 'condition') {
+      const ev = g.edges.filter(e => e.kind === 'evid' && e.dst === c.name); const evs = ev.map(e => sym(e.src)).join(', ');
+      for (const b of g.children(c.name, ['out'])) {
+        const B = N(b); const sc = B.scope.map(s => sym(s)).join(', ');
+        const others = [...g.nodes.keys()].filter(x => ['unknown', 'predicted'].includes(N(x).kind) && !B.scope.includes(x));
+        const integ = others.length ? '\\int ' + others.map(x => `\\mathrm{d}${sym(x)}`).join(' ') + '\\ ' : '';
+        const ap = B.tags.approx ? `\\quad [\\approx \\text{${texEsc(B.tags.approx)}}]` : '';
+        cond.push(`${c.origin ? `\\text{at } ${sym(c.origin)}:\\ ` : ''}\\mathrm{${b}}(${sc}) = p(${sc} \\mid ${evs}) \\propto ${integ}p_M\\big|_{${evs}\\ \\text{fixed}}${ap}`);
+        const cf = conjugate(g, c.name, b); if (cf) cond.push('\\Rightarrow ' + cf);
+      }
+      const fl = ev.filter(e => e.filt).map(e => `${sym(e.src)}\\text{: ${texEsc(e.filt.raw)}}`);
+      if (fl.length) cond.push('\\text{evidence filters: } ' + fl.join(';\\ '));
+    }
+    const funcs = [];
+    for (const n of g.nodes.values()) {
+      if (n.kind !== 'derived' || n.tags.socket || !n.func) continue;
+      if (![...g.ancestors(n.name, ['det', 'eval', 'out'])].some(a => ['belief', 'condition'].includes(N(a).kind))) continue;
+      let a = argsOf(g, n.name, 'det').replace(/\beval\s+/g, ''); const fl = a.match(/\s\[([^\]]*)\]/); a = a.replace(/\s+\[[^\]]*\]/g, '');
+      const ev = g.edges.filter(e => e.dst === n.name && e.kind === 'eval').map(e => e.src); const note = [];
+      if (ev.length) note.push('evaluation-only: ' + ev.join(', ') + (fl ? ` [${fl[1]}]` : ''));
+      if (has(n.tags, 'select')) note.push('selection');
+      funcs.push(`${sym(n.name, idxOf(n))} = ${fam(n.func)}(${expr(a, g)})${note.length ? `\\quad\\text{(${texEsc(note.join('; '))})}` : ''}`);
+    }
+    const cons = [...g.nodes.values()].filter(n => n.kind === 'belief' && has(n.tags, 'constructed')).map(n =>
+      `${sym(n.name, idxOf(n))} = ${fam(n.func || 'construct')}(${expr(argsOf(g, n.name, 'det').replace(/\s+\[[^\]]*\]/g, ''), g)})\\quad\\text{[constructed: ${texEsc(n.tags.constructed)}]}`);
+    return { model, conditioning: cond, derived: funcs, constructed: cons, analysisPlates: [...ana] };
+  }
+
+  // ------------------------------------------------------------------ panels (port of panels.py, D4.10)
+  const PANELS = { A: 'Model', B: 'Inference', C: 'Evaluation' };
+  function classify(g) {
+    const N = n => g.N(n); const home = {}; const nodes = [...g.nodes.values()];
+    const uses = (n, kinds) => g.edges.filter(e => e.src === n && kinds.includes(e.kind));
+    for (const n of nodes) if (has(n.tags, 'panel') && PANELS[String(n.tags.panel).trim().slice(0, 1).toUpperCase()]) home[n.name] = String(n.tags.panel).trim().slice(0, 1).toUpperCase();
+    for (const n of nodes) {
+      if (home[n.name]) continue; const k = n.kind;
+      if (k === 'condition' || k === 'check' || (k === 'belief' && (n.scope.length || has(n.tags, 'constructed')))) home[n.name] = 'B';
+      else if (k === 'belief' || k === 'unknown' || k === 'predicted') home[n.name] = 'A';
+      else if (k === 'observed') {
+        const onlyEval = !n.family && !uses(n.name, ['gen', 'det', 'evid']).length &&
+          (uses(n.name, ['eval']).length || g.edges.some(e => e.dst === n.name && e.kind === 'real') || nodes.some(m => (m.meta.using || []).includes(n.name)));
+        home[n.name] = onlyEval ? 'C' : 'A';
+      }
+    }
+    for (const n of nodes) {
+      if (home[n.name] || n.kind !== 'derived') continue;
+      const anc = g.ancestors(n.name, ['det', 'eval', 'out']);
+      if ([...g.descendants(n.name, ['det'])].some(c => N(c).kind === 'belief' && has(N(c).tags, 'constructed'))) { home[n.name] = 'B'; continue; }
+      if (![...anc].some(a => ['belief', 'condition'].includes(N(a).kind))) { home[n.name] = 'A'; continue; }
+      const scored = g.parents(n.name, ['eval']).length || has(n.tags, 'select') || has(n.meta, 'decided') || [...anc].some(a => N(a) && has(N(a).tags, 'select'));
+      home[n.name] = scored ? 'C' : 'B';
+    }
+    for (const n of nodes) {
+      if (home[n.name]) continue;
+      const ch = new Set(g.children(n.name).filter(c => home[c]).map(c => home[c]));
+      home[n.name] = ch.size === 1 ? [...ch][0] : 'A';
+    }
+    return home;
+  }
+  function subgraph(g, panel, home) {
+    home = home || classify(g);
+    const core = new Set(Object.keys(home).filter(n => home[n] === panel));
+    const keep = new Set(core);
+    for (const e of g.edges) if (core.has(e.dst) && g.nodes.has(e.src)) keep.add(e.src);
+    const h = new Graph(); h.version = g.version; h.originAfter = Object.assign({}, g.originAfter);
+    const copyNode = x => Object.assign({}, g.N(x), { stub: core.has(x) ? null : home[x] });
+    for (const name of g.nodes.keys()) if (keep.has(name)) h.nodes.set(name, copyNode(name));
+    h.edges = g.edges.filter(e => core.has(e.dst) && keep.has(e.src));
+    for (const c of [...core].filter(n => g.N(n).kind === 'condition' && g.N(n).origin)) {
+      const start = g.edges.filter(e => e.dst === c && e.kind === 'evid').map(e => e.src);
+      for (const b of g.children(c, ['out'])) start.push(...g.N(b).scope);
+      const anc = new Set(); for (const x of start) for (const a of g.ancestors(x, ['gen', 'det', 'prior'])) anc.add(a);
+      for (const x of sortS(anc)) if (g.N(x).kind === 'observed' && !keep.has(x)) { h.nodes.set(x, copyNode(x)); keep.add(x); h.edges.push(Edge(x, c, 'via')); }
+    }
+    const used = new Set([...h.nodes.values()].flatMap(n => n.plates));
+    for (const [v, r] of g.plates) if (used.has(v)) h.plates.set(v, r);
+    h.pending = g.pending.filter(p => keep.has(p[0]));
+    return h;
+  }
+  const COUNTERPART = { 'look-ahead': /enters (?:condition )?(\w+)/, availability: /(?:into|of) (?:condition )?(\w+)/,
+    contamination: /evidence of (\w+)/, 'held-out-reused': /selection (\w+)/, exploratory: /decision (\w+)/,
+    'realisation-early': /realisation of (\w+)/, 'check-failed': /on (\w+)/ };
+  function involved(g, d) {
+    const names = new Set([d.node]); const pat = COUNTERPART[d.code];
+    if (pat) { const m = d.msg.match(pat); if (m) names.add(m[1]); }
+    return new Set([...names].filter(x => g.nodes.has(x)));
+  }
+  function coverage(g, home) {
+    home = home || classify(g);
+    const views = {}; for (const p in PANELS) views[p] = new Set(subgraph(g, p, home).nodes.keys());
+    return validate(g).filter(d => ['Error', 'Warning', 'Unresolved'].includes(d.cls)).map(d => {
+      const inv = involved(g, d); const where = Object.keys(PANELS).find(p => inv.size && [...inv].every(x => views[p].has(x))) || null;
+      return { d, where, inv: [...inv] };
+    });
+  }
+  function renderPanels(g, opts = {}) {
+    const home = classify(g); const cov = coverage(g, home);
+    return Object.keys(PANELS).filter(p => Object.values(home).includes(p)).map(p => ({
+      panel: p, title: PANELS[p],
+      svg: renderSVG(subgraph(g, p, home), { diagnostics: opts.diagnostics, diags: cov.filter(c => c.where === p).map(c => c.d) }) }));
+  }
+
+  const api = { parse, validate, layout, renderSVG, renderPanels, classify, coverage, maths, label };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SAG = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+const EXAMPLES = [{"title": "D1 · Beta-binomial update and prediction", "text": "sag 0.5\n# Decoding diagram 1: Beta-binomial update with posterior prediction\nfixed n = 40\nfixed n_new = 10\nbelief prior_p ~ Beta(2, 2) -> p\nunknown p\nobserved y = 12 ~ Binomial(n, p)\npredicted y_new [future] ~ Binomial(n_new, p)\ncondition C given y -> post(p), pred(y_new)\n"}, {"title": "D2 · Hierarchical model, failed MCMC check", "text": "sag 0.5\n# Decoding diagram 2: hierarchical normal model, MCMC, failed check (sigma outside the plates, N4)\nfixed J\nfixed sigma = 1.5\nbelief prior_mu_tau -> mu, tau\nunknown mu\nunknown tau\nplate j in 1..J {\n  fixed n_j\n  unknown theta[j] ~ Normal(mu, tau)\n  plate i in 1..n_j {\n    observed y[i,j] ~ Normal(theta[j], sigma)\n  }\n}\ncondition C given y -> post(mu, tau, theta) [approx: NUTS 4x1000]\ncheck rhat on post criterion \"R-hat < 1.01\" = pass\ncheck div on post criterion \"divergences = 0\" = fail\nderived p_diff := prob_greater(post, theta[1], theta[2])\n"}, {"title": "D3 · Forecast at an origin, look-ahead error", "text": "sag 0.5\n# Decoding diagram 3: Poisson forecast at origin o, with a look-ahead error\nbelief prior_lambda ~ Gamma(2, 1) -> lambda\nunknown lambda\nplate k in 1..t {\n  observed y_hist[k] ~ Poisson(lambda) {a <= o}\n}\nfixed t\nobserved y_star ~ Poisson(lambda) {e = o-2, a = o+3}\npredicted y_new [future] ~ Poisson(lambda)\ncondition C @o given y_hist, y_star -> pred(y_new)\nobserved y_real {a = o+7}\nrealise y_new -> y_real\nderived log_score := log_density(pred, eval y_real)\n"}, {"title": "D4 · Survival: censoring and missingness", "text": "sag 0.5\n# Decoding diagram 4: survival with censoring and a drawn missingness mechanism (v0.3.1 tags: N1, N8)\nfixed N\nfixed gamma0\nfixed gamma1\nbelief prior_lambda_beta [assumed] -> lambda, beta\nunknown lambda\nunknown beta\nplate i in 1..N {\n  observed x[i]\n  observed c[i]\n  observed delta[i]\n  observed r[i] ~ Bernoulli(inv_logit(gamma0 + gamma1 * x[i]))\n  observed T[i] ~ Exponential(lambda * exp(beta * x[i])) [cens: T > c if delta = 0] [obs: r = 1]\n}\ncondition C given T -> post(lambda, beta)\n"}, {"title": "D5 · Rolling origin, socket, selection reuse", "text": "sag 0.5\n# Decoding diagram 5: rolling origin, socket, selection reuse (N9: first case split into two nodes)\nbelief prior_psi [assumed] -> psi\nunknown psi\nobserved cases {a, e}\nsocket hazard : derived := kernel(psi, cases) { alt gravity; alt distance }\nobserved first_case ~ ?(hazard)\npredicted first_case_new [future] ~ ?(hazard)\nplate o in origins {\n  condition C @o given first_case [a <= o] -> pred(first_case_new) [approx: NUTS]\n  derived rank := top5(pred)\n  derived hit := hit_rate(rank, eval first_case [o < a <= o+14])\n}\nderived choice := argmax_mean(hit) [select]\nderived reported := hit_rate_of(choice, eval first_case [o < a <= o+14])\n"}, {"title": "S01 · Forecasting pipeline, as first run", "text": "sag 0.5\n# S01a: rolling-origin forecasting, preprint as described (test vehicle only; my reading of the texts)\nfixed T\nfixed h = 21 {decided: unknown, using: (y_target)}            # routine horizon chosen after seeing scores\nfixed tau = 2026-05-28 {decided: unknown, using: (y)}         # changepoint from a scan of the full series\nbelief prior_par ~ Normal(0, 1) [param: sd] [assumed] -> omega, phi, alpha, beta\nunknown omega\nunknown phi\nunknown alpha\nunknown beta\nplate t in 1..T {\n  derived S[t] := regime(t, tau)\n  derived mu[t] := ingarch(omega, phi, alpha, beta, S[t], y[t-1])\n  observed y[t] ~ NegBinomial(mu[t], phi) [param: mean-dispersion] [obs: i in O] {a}   # later build; report dates not kept\n}\nplate o in origins {\n  predicted y_new [future] ~ NegBinomial(mu, phi) [param: mean-dispersion]\n  condition C @o given y [a <= o] -> pred(y_new) [approx: NUTS 2x400]\n  check rhat on pred criterion \"R-hat < 1.01\" = fail                   # ten fits up to 1.04 counted as converged\n  check div on pred criterion \"divergences = 0\" = pass\n  belief base [constructed: bootstrap of last 7 increments] := bootstrap(y [a <= o])\n  observed y_pool {a}                                        # realised targets of earlier origins\n  derived c := shift_estimate(pred[o' < o], eval y_pool)     # pool not restricted to observed targets\n  belief pred_recal [constructed: shift by c] := shift(pred, c)\n  derived w := weight_from(eval y_pool [a <= o])\n  belief ens [constructed: mixture w] := mix(pred_recal, base, w)\n  observed y_target {a = o+21}\n  realise y_new -> y_target\n  derived wis := WIS(ens, h, eval y_target [o < a <= o+21])\n}\nderived model_choice := select_pair(wis) [select] {decided: unknown, using: (y_target)}\nderived reported := mean_wis_of(model_choice, eval y_target [o < a <= o+21])\n"}, {"title": "S01 · Same pipeline, pre-registered", "text": "sag 0.5\n# S01b: pre-registered extension: everything frozen at f = 2026-07-20, scored data all arrive after f\nfixed T\nfixed h = 21 {decided: 2026-07-20}\nfixed tau = 2026-05-28 {decided: 2026-07-20, using: (y_pre)}\nobserved y_pre {a <= 2026-07-20}                             # series as it stood at the freeze\nbelief prior_par ~ Normal(0, 1) [param: sd] [assumed] -> omega, phi, alpha, beta\nunknown omega\nunknown phi\nunknown alpha\nunknown beta\nplate t in 1..T {\n  derived S[t] := regime(t, tau)\n  derived mu[t] := ingarch(omega, phi, alpha, beta, S[t], y[t-1])\n  observed y[t] ~ NegBinomial(mu[t], phi) [param: mean-dispersion] {a <= o}   # snapshot per origin\n}\nplate o in origins after 2026-07-20 {\n  predicted y_new [future] ~ NegBinomial(mu, phi) [param: mean-dispersion]\n  condition C @o given y [a <= o] -> pred(y_new) [approx: NUTS 4x1000]\n  check rhat on pred criterion \"R-hat < 1.01\" = pass\n  check div on pred criterion \"divergences = 0\" = pass\n  observed y_pool {a <= o}                                   # only targets already observed at o\n  derived c := shift_estimate(pred[o' < o], y_pool [a <= o])\n  belief pred_recal [constructed: shift by c] := shift(pred, c)\n  fixed w = 0.5 {decided: 2026-07-20}\n  belief ens [constructed: mixture w] := mix(pred_recal, pred, w)\n  observed y_target {a > 2026-07-20}\n  realise y_new -> y_target\n  derived wis := WIS(ens, h, eval y_target [o < a <= o+21])\n}\nderived reported := mean(wis)\n"}, {"title": "S02 · Evidence synthesis, mixed evidence", "text": "sag 0.5\n# S02: evidence synthesis with evidence of mixed standing (One-chain design as test vehicle)\nfixed T_weeks = 20\nfixed Z = 4\nplate f in prior_families {\n  belief prior_H ~ Categorical(w_f) [elicited: structured review, 35 sources] {decided: 2026-08-02} -> H\n}\nfixed prior_families = 4\nfixed w_f\nunknown H\nbelief prior_theta ~ Uniform(bounds) [assumed] -> theta\nunknown theta\nfixed bounds\nsocket history : derived := simulate(H, theta) { alt H1 one chain; alt H2 repeated spillover; alt H3 unrelated signal; alt H4 mixed } selector H\nplate t in 1..T_weeks {\n  plate z in 1..Z {\n    unknown I[t,z] ~ Transmission(history)\n    unknown B[t,z] ~ Background(theta)\n    observed Y[t,z] ~ Convolution(I, B) [status: confirmed]\n  }\n}\nobserved reports ~ Count(I) [soft: at least 500, lower bound] [status: secondary]\nobserved genomic_time ~ Timing(I) [soft: day 55 +- 22, truncated] [status: model-derived]\nobserved bridge ~ Binomial(4, theta) [status: propagated from G_v02]\nderived S := summaries(Y, reports, genomic_time, bridge)\ncondition C given S -> post(H, theta) [approx: ABC-SMC eps 0.9 3x450]\ncheck ess on post criterion \"ESS > 200 per chain\" = pass\ncheck recovery on post criterion \"model recovery on synthetic data\" = report\nderived P_discontinuous := prob_in(post, H2, H4)\nderived interpret := class_level(recovery) {decided: 2026-08-02}\n"}];
+(function () {
+  const $ = id => document.getElementById(id);
+  const src = $('src'), sel = $('example');
+  let overlay = true, panels = false, lastTex = '', lastSvg = '', timer = null;
+  try { panels = localStorage.getItem('sag-panels') === '1'; } catch (e) {}
+  EXAMPLES.forEach((ex, i) => { const o = document.createElement('option'); o.value = i; o.textContent = ex.title; sel.appendChild(o); });
+  let start = 2;
+  try { const d = localStorage.getItem('sag-draft'); if (d) { src.value = d; start = -1; } } catch (e) {}
+  if (start >= 0) { sel.value = String(start); src.value = EXAMPLES[start].text; } else { const o = document.createElement('option'); o.value = 'draft'; o.textContent = 'Your draft'; sel.prepend(o); sel.value = 'draft'; }
+  sel.addEventListener('change', () => { if (sel.value === 'draft') return; src.value = EXAMPLES[+sel.value].text; update(); });
+  src.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { try { localStorage.setItem('sag-draft', src.value); } catch (e) {} update(); }, 250); });
+  src.addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); const s = src.selectionStart; src.setRangeText('  ', s, src.selectionEnd, 'end'); src.dispatchEvent(new Event('input')); } });
+
+  const tabs = ['figure', 'validator', 'maths'];
+  function show(t) { tabs.forEach(x => { $('tab-' + x).setAttribute('aria-selected', x === t); $('view-' + x).hidden = x !== t; }); if (t === 'maths') typeset(); try { localStorage.setItem('sag-tab', t); } catch (e) {} }
+  tabs.forEach(t => $('tab-' + t).addEventListener('click', () => show(t)));
+  try { const t = localStorage.getItem('sag-tab'); if (tabs.includes(t)) show(t); } catch (e) {}
+
+  $('panels').setAttribute('aria-pressed', panels);
+  $('panels').addEventListener('click', () => { panels = !panels; $('panels').setAttribute('aria-pressed', panels); try { localStorage.setItem('sag-panels', panels ? '1' : '0'); } catch (e) {} update(); });
+  $('overlay').addEventListener('click', () => { overlay = !overlay; $('overlay').setAttribute('aria-pressed', overlay); $('overlay-note').hidden = !overlay; update(); });
+  function copy(text, btn) {
+    const done = () => { const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => (btn.textContent = t), 1200); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallback(text));
+    else fallback(text);
+    function fallback(t) { $('latex').textContent = t; const r = document.createRange(); r.selectNodeContents($('latex')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); show('maths'); }
+  }
+  $('copy-tex').addEventListener('click', e => copy(lastTex, e.currentTarget));
+  $('copy-svg').addEventListener('click', e => copy(lastSvg, e.currentTarget));
+
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function update() {
+    let g, diags;
+    try { g = SAG.parse(src.value); diags = SAG.validate(g); }
+    catch (err) { $('status').innerHTML = `<span class="chip c-Error">cannot read: ${esc(err.message)}</span>`; return; }
+    const counts = {}; diags.forEach(d => (counts[d.cls] = (counts[d.cls] || 0) + 1));
+    const order = ['Syntax', 'Error', 'Missing', 'Unresolved', 'Warning', 'Stated'];
+    $('status').innerHTML = order.filter(c => counts[c]).map(c => `<span class="chip c-${c}">${counts[c]} ${c === 'Syntax' ? 'syntax' : c.toLowerCase()}</span>`).join('') || '<span class="chip c-Stated">no findings</span>';
+    $('diags').innerHTML = diags.map(d => `<tr><td class="cls c-${d.cls}"><span class="sev"></span>${d.cls}</td><td class="rule">${esc(d.rule)}</td><td class="node">${esc(d.node)}</td><td>${esc(d.msg)}</td></tr>`).join('') || '<tr><td colspan="4">No findings.</td></tr>';
+    try {
+      $('figure').classList.toggle('tall', panels);
+      if (!g.nodes.size) { lastSvg = ''; $('figure').innerHTML = '<p class="note">Nothing to draw yet.</p>'; }
+      else if (panels) {
+        const ps = SAG.renderPanels(g, { diagnostics: overlay }); lastSvg = ps.map(p => p.svg).join('\n');
+        $('figure').innerHTML = ps.map(p => `<div class="panel-fig"><h4><span>${p.panel}</span>${p.title}</h4>${p.svg}</div>`).join('') +
+          '<p class="note">Panels are views of one graph: faded nodes marked → A, → B or → C are drawn in full in that panel. The validator always checks the whole graph, and each finding is marked in a panel that shows every node it involves.</p>';
+      } else { lastSvg = SAG.renderSVG(g, { diagnostics: overlay }); $('figure').innerHTML = lastSvg; }
+    }
+    catch (err) { $('figure').innerHTML = `<p class="note">The figure could not be drawn: ${esc(err.message)}</p>`; }
+    try {
+      const m = SAG.maths(g); const blocks = [];
+      blocks.push(['Model', [m.model]]);
+      if (m.conditioning.length) blocks.push(['Conditioning', m.conditioning]);
+      if (m.derived.length) blocks.push(['Derived results (functionals of beliefs)', m.derived]);
+      if (m.constructed.length) blocks.push(['Constructed beliefs (not posteriors)', m.constructed]);
+      $('maths').innerHTML = blocks.map(([h, eqs]) => `<h3>${h}</h3>` + eqs.map(e => `<div class="eq">\\[${esc(e)}\\]</div>`).join('')).join('') +
+        (m.analysisPlates.length ? `<p class="note">Analysis plates (reruns, not model factors): ${m.analysisPlates.join(', ')}.</p>` : '');
+      lastTex = '\\begin{align*}\n' + [m.model, ...m.conditioning, ...m.derived, ...m.constructed].map(l => l.replace(/ = | \\propto /, x => ' &' + x.trim() + ' ')).join(' \\\\\n') + '\n\\end{align*}';
+      $('latex').textContent = lastTex;
+      if (!$('view-maths').hidden) typeset();
+    } catch (err) { $('maths').innerHTML = `<p class="note">The maths could not be written: ${esc(err.message)}</p>`; }
+  }
+  function typeset() { if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetClear && MathJax.typesetClear([$('maths')]); MathJax.typesetPromise([$('maths')]).catch(() => {}); } else setTimeout(typeset, 300); }
+  update();
+})();
+</script>
