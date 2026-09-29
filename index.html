@@ -1219,10 +1219,20 @@ const EXAMPLES = [{"title": "D1 · Beta-binomial update and prediction", "text":
       img.src = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(markup)));
     });
   }
-  function downloadBlob(blob, filename) {
+  // Saving a file: inside the claude.ai artifact viewer a plain <a download> is inert (the sandboxed
+  // frame has no save permission of its own), so try the `downloads` capability first and fall back
+  // to a normal browser download when the page isn't running inside that viewer (e.g. on GitHub Pages).
+  async function downloadBlob(blob, filename) {
+    try {
+      if (window.claude && window.claude.use) {
+        const downloads = await window.claude.use('downloads');
+        if (downloads) { await downloads.save({ filename, data: blob }); return 'saved'; }
+      }
+    } catch (err) { if (err && err.code === 'declined') return 'declined'; if (err && err.code) throw err; }
     const url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return 'saved';
   }
   function figureSlug() {
     const opt = sel.options[sel.selectedIndex];
@@ -1238,10 +1248,15 @@ const EXAMPLES = [{"title": "D1 · Beta-binomial update and prediction", "text":
       else { downloadBlob(blob, figureSlug() + '.png'); flash(btn, 'Saved (copy unsupported here)'); }
     } catch (err) { flash(btn, 'Could not copy'); }
   });
-  $('save-svg').addEventListener('click', e => { const m = exportSvgMarkup(); if (m) downloadBlob(new Blob([m], { type: 'image/svg+xml' }), figureSlug() + '.svg'); else flash(e.currentTarget, 'Nothing to save'); });
+  $('save-svg').addEventListener('click', async e => {
+    const m = exportSvgMarkup(), btn = e.currentTarget; if (!m) { flash(btn, 'Nothing to save'); return; }
+    try { const r = await downloadBlob(new Blob([m], { type: 'image/svg+xml' }), figureSlug() + '.svg'); if (r === 'saved') flash(btn, 'Saved'); }
+    catch (err) { flash(btn, 'Could not save'); }
+  });
   $('save-png').addEventListener('click', async e => {
     const m = exportSvgMarkup(), btn = e.currentTarget; if (!m) { flash(btn, 'Nothing to save'); return; }
-    try { downloadBlob(await rasterize(m, 3), figureSlug() + '.png'); } catch (err) { flash(btn, 'Could not export'); }
+    try { const r = await downloadBlob(await rasterize(m, 3), figureSlug() + '.png'); if (r === 'saved') flash(btn, 'Saved'); }
+    catch (err) { flash(btn, 'Could not export'); }
   });
 
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
