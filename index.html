@@ -129,6 +129,9 @@ pre.latex { font: 12.5px/1.55 var(--mono); background: var(--sunk); padding: 12p
           <button id="panels" aria-pressed="false">Panels</button>
           <button id="overlay" aria-pressed="true">Validator overlay</button>
           <button id="copy-svg">Copy SVG</button>
+          <button id="copy-png">Copy PNG</button>
+          <button id="save-svg">Save SVG</button>
+          <button id="save-png">Save PNG</button>
         </div>
         <div class="figure-box" id="figure"></div>
         <p class="note" id="overlay-note">Coloured marks are the validator overlay (red = error, orange = warning, grey = unresolved). They are not part of the notation; hover a mark for its message.</p>
@@ -1177,7 +1180,69 @@ const EXAMPLES = [{"title": "D1 · Beta-binomial update and prediction", "text":
     function fallback(t) { $('latex').textContent = t; const r = document.createRange(); r.selectNodeContents($('latex')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); show('maths'); }
   }
   $('copy-tex').addEventListener('click', e => copy(lastTex, e.currentTarget));
-  $('copy-svg').addEventListener('click', e => copy(lastSvg, e.currentTarget));
+
+  // Export: figure(s) currently on screen -> one standalone SVG string (styles inlined, white
+  // background, panels stacked). The page's own CSS uses custom properties the browser resolves;
+  // a copied/saved file has no such stylesheet, so colours and strokes are baked in literally here.
+  const EXPORT_CSS = 'text{font-family:Arial,Helvetica,sans-serif;fill:#16201c}' +
+    '.muted{fill:#6b7773}.stroke,.stroke2{stroke:#16201c;stroke-width:1.5}.stroke2{stroke-width:1.9}' +
+    '.thin{stroke:#16201c;stroke-width:1.1}' +
+    '.dotted{stroke:#16201c;stroke-width:2.2;stroke-dasharray:1.5 4;stroke-linecap:round}' +
+    '.fillink{fill:#16201c;stroke:none}.hollow{fill:#fff;stroke:#16201c;stroke-width:1.4}' +
+    '.open{fill:#fff;stroke:#16201c;stroke-width:1.9}.solidnode{fill:#16201c}' +
+    '.plate{fill:none;stroke:#16201c;stroke-width:1.4}' +
+    '.socket{fill:none;stroke:#16201c;stroke-width:1.3;stroke-dasharray:6 4}' +
+    '.frontier{stroke:#6b7773;stroke-width:1;stroke-dasharray:8 5}' +
+    '.badge.err{fill:#b3261e}.badge.warn{fill:#a86400}.badge.unres{fill:#66707a}.badgeink{fill:#fff}' +
+    '.stub{opacity:.38}.via{stroke:#6b7773;stroke-width:1;stroke-dasharray:2 4}';
+  function exportSvgMarkup() {
+    const svgs = [...document.querySelectorAll('#figure svg.sagfig')];
+    if (!svgs.length) return null;
+    const parts = svgs.map(s => ({ w: +s.getAttribute('width') || 800, h: +s.getAttribute('height') || 600, inner: s.innerHTML }));
+    const gap = 22, W = Math.max(...parts.map(p => p.w)), H = parts.reduce((a, p) => a + p.h, 0) + gap * (parts.length - 1);
+    let y = 0;
+    const nested = parts.map(p => { const s = `<svg x="0" y="${y}" width="${p.w}" height="${p.h}" viewBox="0 0 ${p.w} ${p.h}">${p.inner}</svg>`; y += p.h + gap; return s; }).join('');
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" class="sagfig"><style>${EXPORT_CSS}</style><rect x="0" y="0" width="${W}" height="${H}" fill="#fff"/>${nested}</svg>`;
+  }
+  function svgSize(markup) { const m = markup.match(/width="([\d.]+)" height="([\d.]+)"/); return m ? [+m[1], +m[2]] : [800, 600]; }
+  function rasterize(markup, scale) {
+    return new Promise((resolve, reject) => {
+      const [w, h] = svgSize(markup);
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(b => (b ? resolve(b) : reject(new Error('could not encode PNG'))), 'image/png');
+      };
+      img.onerror = () => reject(new Error('could not rasterize SVG'));
+      img.src = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(markup)));
+    });
+  }
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+  function figureSlug() {
+    const opt = sel.options[sel.selectedIndex];
+    return ((opt && opt.textContent) || 'sag-figure').split('·')[0].trim().toLowerCase().replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '') || 'sag-figure';
+  }
+  function flash(btn, text, ms = 1400) { const t = btn.textContent; btn.textContent = text; setTimeout(() => (btn.textContent = t), ms); }
+  $('copy-svg').addEventListener('click', e => { const m = exportSvgMarkup(); if (m) copy(m, e.currentTarget); });
+  $('copy-png').addEventListener('click', async e => {
+    const m = exportSvgMarkup(), btn = e.currentTarget; if (!m) return;
+    try {
+      const blob = await rasterize(m, 2);
+      if (navigator.clipboard && window.ClipboardItem) { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); flash(btn, 'Copied'); }
+      else { downloadBlob(blob, figureSlug() + '.png'); flash(btn, 'Saved (copy unsupported here)'); }
+    } catch (err) { flash(btn, 'Could not copy'); }
+  });
+  $('save-svg').addEventListener('click', e => { const m = exportSvgMarkup(); if (m) downloadBlob(new Blob([m], { type: 'image/svg+xml' }), figureSlug() + '.svg'); else flash(e.currentTarget, 'Nothing to save'); });
+  $('save-png').addEventListener('click', async e => {
+    const m = exportSvgMarkup(), btn = e.currentTarget; if (!m) { flash(btn, 'Nothing to save'); return; }
+    try { downloadBlob(await rasterize(m, 3), figureSlug() + '.png'); } catch (err) { flash(btn, 'Could not export'); }
+  });
 
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   function update() {
