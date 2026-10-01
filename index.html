@@ -945,6 +945,17 @@ window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'glo
   }
   const radius = n => ({ belief: 0.5, condition: 0.1, fixed: 0.15, derived: 0.38, check: 0.38 }[n.kind] ?? R);
 
+  // Plate label; a size that is missing or undeclared says so (RR7, round 3: "1…T" looked complete)
+  function plateLabel(g, v, rng) {
+    const src = g.sizeSource || g, notes = [];
+    for (const s of new Set(rng.match(/[A-Za-z_]\w*/g) || [])) {
+      const n = src.nodes.get(s);
+      if (!n) notes.push(s === rng.trim() ? 'undeclared' : `${s} undeclared`); else if (n.kind === 'fixed' && !n.value) notes.push(`${s}: ?`);
+    }
+    return `${v} ∈ ${rng.replace('..', '…')}` + (notes.length ? ` (${notes.join('; ')})` : '');
+  }
+  const STUB_LEGEND = 'Faded nodes marked → A, → B or → C are drawn in full in that panel; the panels are views of one graph.';
+
   function renderSVG(g, opts = {}) {
     const { pos, edges, origins, hidden } = layout(g); const N = n => g.N(n);
     for (const h of hidden) delete pos[h];
@@ -961,7 +972,12 @@ window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'glo
           if (dd < 0.45 && t > 0.05 && t < 0.95) {
             const mover = !N(e.dst).plates.length ? e.dst : (!N(e.src).plates.length ? e.src : null);
             if (!mover || (nudged[mover] || 0) >= 1) continue; nudged[mover] = (nudged[mover] || 0) + 1;
-            const side = pos[mover][1] <= pos[nn][1] ? -1 : 1; pos[mover] = [pos[mover][0], pos[mover][1] + side * DY * 0.6]; moved = true;
+            const side = pos[mover][1] <= pos[nn][1] ? -1 : 1;
+            // never nudge a node onto another one (round 3 packet: ω landed on α)
+            for (const s_ of [side, -side]) {
+              const cand = [pos[mover][0], pos[mover][1] + s_ * DY * 0.6];
+              if (Object.keys(pos).every(k => k === mover || Math.hypot(cand[0] - pos[k][0], cand[1] - pos[k][1]) >= 0.9)) { pos[mover] = cand; moved = true; break; }
+            }
           }
         }
       }
@@ -974,7 +990,7 @@ window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'glo
     }
     const all = [...Object.values(pos), ...Object.values(ghosts)];
     const x0 = Math.min(...all.map(p => p[0])) - 1.6, x1 = Math.max(...all.map(p => p[0])) + 2.0;
-    const y0 = Math.min(...all.map(p => p[1])) - 1.9, y1 = Math.max(...all.map(p => p[1])) + 1.4;
+    const y0 = Math.min(...all.map(p => p[1])) - 1.9 - (opts.footnote ? 0.5 : 0), y1 = Math.max(...all.map(p => p[1])) + 1.4;
     const X = x => ((x - x0) * SC).toFixed(1), Y = y => ((y1 - y) * SC).toFixed(1);
     const W = (x1 - x0) * SC, H = (y1 - y0) * SC;
     const o = [];
@@ -990,7 +1006,7 @@ window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'glo
       const a = Math.min(...mem.map(p => p[0])) - pad, b = Math.max(...mem.map(p => p[0])) + pad;
       const c = Math.min(...mem.map(p => p[1])) - pad - 0.5, d = Math.max(...mem.map(p => p[1])) + pad;
       o.push(`<rect x="${X(a)}" y="${Y(d)}" width="${((b - a) * SC).toFixed(1)}" height="${((d - c) * SC).toFixed(1)}" class="plate"/>`);
-      txt(b - 0.08, c + 0.14, `${v} ∈ ${rng.replace('..', '…')}`, { size: 11, anchor: 'end' });
+      txt(b - 0.08, c + 0.14, plateLabel(g, v, rng), { size: 11, anchor: 'end' });
     }
     for (const c in origins) { const fx = pos[c][0] + DX * 0.5; o.push(`<line x1="${X(fx)}" y1="${Y(y1 - 0.4)}" x2="${X(fx)}" y2="${Y(y0 + 0.4)}" class="frontier"/>`); txt(fx, y1 - 0.25, origins[c], { size: 11, cls: 'muted' }); }
     // edges
@@ -1028,7 +1044,11 @@ window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'glo
       let kind = { prior: 'gen', gen: 'gen', det: 'det', evid: 'det', out: 'det', eval: 'eval', check: 'det', real: 'real' }[e.kind];
       if (kind === 'gen' && N(e.dst).kind === 'derived') kind = 'det';
       edge(p, q, kind, radius(N(e.src)), radius(N(e.dst)));
-      if (e.filt) { const m = [p[0] + 0.35 * (q[0] - p[0]), p[1] + 0.35 * (q[1] - p[1])]; txt(m[0], m[1] + 0.2, `[${e.filt.raw.replace(/<=/g, '≤')}]`, { size: 10, cls: 'muted' }); }
+      if (e.filt) {   // at the middle of its own edge, not near a shared source (RR6, round 3)
+        const L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1e-9, d = [(q[0] - p[0]) / L, (q[1] - p[1]) / L], sg = d[0] >= 0 ? 1 : -1;
+        const m = [(p[0] + q[0]) / 2 - d[1] * 0.2 * sg, (p[1] + q[1]) / 2 + d[0] * 0.2 * sg];
+        txt(m[0], m[1], `[${e.filt.raw.replace(/<=/g, '≤')}]`, { size: 10, cls: 'muted' });
+      }
     }
     // nodes
     const circle = (x, y, cls) => o.push(`<circle cx="${X(x)}" cy="${Y(y)}" r="${(R * SC).toFixed(1)}" class="${cls}"/>`);
@@ -1087,6 +1107,7 @@ window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'glo
         txt(bx, by, mark[dg.cls], { size: 11, weight: 'bold', cls: 'badgeink' });
       }
     }
+    if (opts.footnote) txt(x0 + 0.1, y0 + 0.25, opts.footnote, { size: 10, anchor: 'start', italic: true, cls: 'muted' });   // RR8
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(0)} ${H.toFixed(0)}" width="${W.toFixed(0)}" height="${H.toFixed(0)}" class="sagfig" role="img">${o.join('')}</svg>`;
   }
 
@@ -1235,7 +1256,7 @@ window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'glo
     const core = new Set(Object.keys(home).filter(n => home[n] === panel));
     const keep = new Set(core);
     for (const e of g.edges) if (core.has(e.dst) && g.nodes.has(e.src)) keep.add(e.src);
-    const h = new Graph(); h.version = g.version; h.originAfter = Object.assign({}, g.originAfter);
+    const h = new Graph(); h.version = g.version; h.originAfter = Object.assign({}, g.originAfter); h.sizeSource = g.sizeSource || g;
     const copyNode = x => Object.assign({}, g.N(x), { stub: core.has(x) ? null : home[x] });
     for (const name of g.nodes.keys()) if (keep.has(name)) h.nodes.set(name, copyNode(name));
     h.edges = g.edges.filter(e => core.has(e.dst) && keep.has(e.src));
@@ -1268,9 +1289,11 @@ window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'glo
   }
   function renderPanels(g, opts = {}) {
     const home = classify(g); const cov = coverage(g, home);
-    return Object.keys(PANELS).filter(p => Object.values(home).includes(p)).map(p => ({
+    const shown = Object.keys(PANELS).filter(p => Object.values(home).includes(p));
+    return shown.map(p => ({
       panel: p, title: PANELS[p],
-      svg: renderSVG(subgraph(g, p, home), { diagnostics: opts.diagnostics, diags: cov.filter(c => c.where === p).map(c => c.d) }) }));
+      svg: renderSVG(subgraph(g, p, home), { diagnostics: opts.diagnostics, diags: cov.filter(c => c.where === p).map(c => c.d),
+                                              footnote: p === shown[shown.length - 1] ? STUB_LEGEND : null }) }));
   }
 
   // Training exercises: what is still missing from a goal (port of tools/exercises.py `check`;
@@ -1303,7 +1326,7 @@ window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'glo
     return todo;
   }
 
-  const api = { parse, validate, layout, renderSVG, renderPanels, classify, coverage, maths, label, checkGoal };
+  const api = { parse, validate, layout, renderSVG, renderPanels, classify, coverage, maths, label, checkGoal, plateLabel };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SAG = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 
